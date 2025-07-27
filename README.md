@@ -8,8 +8,7 @@ To make this project I smashed together three existing projects:
 - [PrivacyLinks](https://ethglobal.com/showcase/privacylinks-y30gr) – Chromium web3 extension providing automatic address cycling
 - [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocol
 
-The end result is a privacy-by-default web3 wallet browser extension.
-
+The end result is a privacy-by-default web3 wallet browser extension. 
 
 - **EVM Side**: Smart contracts with deterministic factory deployment and adapter pattern
 - **Monero Side**: Native Monero cryptographic primitives (adapter signatures) for secure transactions
@@ -63,14 +62,10 @@ MONERO_DAEMON_RPC=http://localhost:18081/json_rpc
 MONERO_WALLET_PASSWORD=your_wallet_password
 ```
 
-### Get Testnet Funds
-- **Base Sepolia ETH**: [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-sepolia-faucet)
-- **Monero Stagenet**: [Monero Stagenet Faucet](https://stagenet-faucet.xmr.to/)
-
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/hashlocked-xyz/hashield.git
+git clone https://github.com/madschristensen99/hashield/
 cd hashield
 
 # Install dependencies
@@ -124,34 +119,16 @@ npx hardhat run scripts/claim-dst-escrow.ts --network base-sepolia
 
 ## 🔐 Cryptographic Flow
 
-### Secret & Hashlock Generation
-```javascript
-// 1. Generate random 32-byte secret
-const secret = crypto.randomBytes(32);
-const secretHex = "0x" + secret.toString("hex");
-
-// 2. Create keccak256 hashlock
-const hashlock = ethers.keccak256(secretHex);
-
-// 3. Use in both EVM contracts and Monero transactions
-```
-
 ### Atomic Swap Guarantee
-1. **Setup Phase**: Both parties lock assets using same hashlock
+1. **Setup Phase**: Both parties lock assets
 2. **Claim Phase**: First claimer reveals secret, second uses revealed secret
 3. **Safety**: If either fails, both get refunded after timelock
 
 ## 🛡️ Security Features
 
-### Hash Time Locked Contracts (HTLCs)
-- **Hashlock**: Keccak256 hash ensures atomic execution
-- **Timelock**: Automatic refunds prevent fund loss
-- **Adapter Pattern**: Centralized swap state management
-
 ### Key Protections
 - **No Counterparty Risk**: Trustless execution
 - **Atomic Guarantee**: Both succeed or both fail
-- **Replay Protection**: Each swap uses unique hashlock
 - **Time Boundaries**: Configurable timelock periods
 
 ## 🔧 Configuration
@@ -168,123 +145,6 @@ timelock: {
 - **EVM**: Base Sepolia (testnet), easily extendable to mainnet and other EVM chains
 - **Monero**: Stagenet, ready for mainnet
 
-## 📄 Smart Contract Details
 
-### XMREscrowFactory
-```solidity
-// Create source escrow (EVM→XMR) using Create2 for deterministic addresses
-function createSrcEscrow(bytes32 salt, Immutables memory immutables) external returns (address) {
-    // Implementation uses minimal proxy pattern for gas efficiency
-}
-```
-
-### XMREscrowSrc
-```solidity
-// Deposit function for 1-inch compatibility
-function deposit(
-    bytes32 hashlock,
-    bytes32 claimCommitment,
-    bytes32 refundCommitment,
-    Immutables calldata immutables
-) external payable {
-    // Creates swap via adapter
-}
-```
-
-### XMRSwapAdapter
-```solidity
-// Create swap in SwapCreator
-function createSwap(
-    bytes32 hashlock,
-    bytes32 claimCommitment,
-    bytes32 refundCommitment,
-    address payable claimer,
-    uint256 timeout1,
-    uint256 timeout2,
-    address asset,
-    uint256 value,
-    uint256 nonce
-) external payable returns (bytes32) {
-    // Handles token transfers and creates swap
-}
-```
-
-## 📚 Development
-
-### Testing
-```bash
-# Run tests
-npx hardhat test
-
-# Run specific test file
-npx hardhat test test/XMREscrow.test.ts
-```
-
-### Deployment
-```bash
-# Deploy to Base Sepolia
-npx hardhat run scripts/deploy-xmr.ts --network base-sepolia
-```
-
-## 📜 License
-
-MIT
-    external payable returns (address)
-
-// Create destination escrow (BTC→EVM)  
-function createDstEscrow(Immutables memory immutables)
-    external payable returns (address)
-```
-
-### Immutables Structure
-```solidity
-struct Immutables {
-    bytes32 orderHash;    // Unique order identifier
-    bytes32 hashlock;     // SHA-256 hash of secret
-    uint256 maker;        // Maker address as uint256
-    uint256 taker;        // Taker address as uint256
-    uint256 token;        // Token address (0 = ETH)
-    uint256 amount;       // Amount in wei
-    uint256 safetyDeposit;// Safety deposit
-    uint256 timelocks;    // Packed timelock data
-}
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**"Non-canonical DER signature"**
-```bash
-# Fixed in current version - signatures now properly DER-encoded
-```
-
-**"Order missing taker info"**
-```bash
-# Check flow order - ensure previous steps completed
-# Verify order file exists in orders/ directory
-```
-
-**"Insufficient balance"**
-```bash
-# Check both ETH and BTC testnet balances
-# Ensure sufficient gas fees
-```
-
-**"HTLC address not found"**
-```bash
-# Verify Bitcoin HTLC was created successfully
-# Check order file has bitcoinHTLC.address field
-```
-
-### Debug Commands
-```bash
-# Check order status
-cat orders/order_123.json | jq '.status'
-
-# Verify contract deployment
-npm run debug:timelock
-
-# Check Bitcoin HTLC
 ls btc/output/htlc_*_testnet4.json
 ```
