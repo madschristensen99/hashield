@@ -1,13 +1,18 @@
-# 🛡️ Hashield: Secure cross-chain transactions with Monero-Ethereum atomic swaps
+# 🛡️ Hashield: Private web3 browsing with Monero-Ethereum atomic swaps
 
-Web3 wallet extension build on a secure, modular implementation for trustless atomic swaps between EVM chains (Ethereum, Base, etc.) and Monero. Built on 1Inch's escrow interface with adapter-based architecture for maximum flexibility and security.
+## 🏗️ Project Overview
 
-## 🏗️ Architecture Overview
+To make this project I smashed together three existing projects: 
 
-This system implements **Adapter Signatures** to enable atomic swaps between EVM chains and Monero:
+- [Hashlocked](https://ethglobal.com/showcase/hashlocked-jwaq6) – Fusion + BTC<>EVM Swaps
+- [PrivacyLinks](https://ethglobal.com/showcase/privacylinks-y30gr) – Chromium web3 extension providing automatic address cycling
+- [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocol
+
+The end result is a privacy-by-default web3 wallet browser extension.
+
 
 - **EVM Side**: Smart contracts with deterministic factory deployment and adapter pattern
-- **Monero Side**: Native Monero cryptographic primitives for secure transactions
+- **Monero Side**: Native Monero cryptographic primitives (adapter signatures) for secure transactions
 - **Atomic Guarantee**: Either both parties get their desired assets, or both get refunded
 
 ### 🔄 Supported Swap Directions
