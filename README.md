@@ -1,4 +1,4 @@
-# 🛡️ Hashield: Private web3 browsing with Monero-Ethereum atomic swaps
+# 🛡️ Hashield: Private web3 browsing built on Monero-Ethereum atomic swaps
 
 ## 🏗️ Project Overview
 
