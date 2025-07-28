@@ -1,60 +1,75 @@
-# SwapCreator Adapter
+# PrivateRPC
 
-This repository contains the SwapCreatorAdapter contract that adapts the SwapCreator contract from the atomic-swap repository to implement the IEscrowSrc interface from the cross-chain-swap repository.
+Replace any Ethereum RPC endpoint with pRPC and your MetaMask (or any EIP-1193 wallet) gains private, gas-less, atomic ETH ↔ XMR swaps while remaining fully compatible with existing dApps.
 
-## Deployed Contracts
 
-The following contracts have been deployed to Base Sepolia testnet:
+<p align="center">
+  <img src="assets/logo.jpg" alt="PrivateRPC Logo" width="200">
+</p>
 
-- **SwapCreator**: `0x07b9c8BF96E553Adec406cC6ab8c41CCD3d53a51`
-- **SwapCreatorAdapter**: `0x14Ab64a2f29f4921c200280988eea59c85266A33`
+## Foundry
 
-## Setup
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-1. Clone this repository and its submodules:
-   ```shell
-   git clone --recursive <repository-url>
-   ```
+Foundry consists of:
 
-2. Install Foundry if you haven't already:
-   ```shell
-   curl -L https://foundry.paradigm.xyz | bash
-   foundryup
-   ```
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-3. Create a `.env` file with your private key and RPC URL:
-   ```
-   PRIVATE_KEY=your_private_key_here
-   BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-   ETHERSCAN_API_KEY=optional_etherscan_api_key
-   ```
+## Documentation
 
-## Building
+https://book.getfoundry.sh/
+
+## Usage
+
+### Build
 
 ```shell
 $ forge build
 ```
 
-## Deployment
-
-To deploy the contracts to Base Sepolia:
-
-```shell
-$ ./deploy-direct.sh
-```
-
-This script will:
-1. Deploy the SwapCreator contract
-2. Deploy the SwapCreatorAdapter contract with the SwapCreator address
-
-Alternatively, you can use the Foundry script:
-
-```shell
-$ forge script script/DeployContracts.s.sol --rpc-url base_sepolia --broadcast
-```
-
-## Testing
+### Test
 
 ```shell
 $ forge test
+```
+
+### Format
+
+```shell
+$ forge fmt
+```
+
+### Gas Snapshots
+
+```shell
+$ forge snapshot
+```
+
+### Anvil
+
+```shell
+$ anvil
+```
+
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
 ```
