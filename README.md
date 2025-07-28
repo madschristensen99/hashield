@@ -6,6 +6,45 @@ Replace any Ethereum RPC endpoint with pRPC and your MetaMask (or any EIP-1193 w
   <img src="assets/logo.jpg" alt="PrivateRPC Logo">
 </p>
 
+## 🔄 1Inch Microservice
+
+The 1Inch Microservice is a TypeScript-based bridge between the 1inch Fusion SDK and the SwapD JSON-RPC API, enabling seamless atomic swaps between ETH and XMR.
+
+### Features
+
+- 🔒 **Atomic Swaps**: Facilitates trustless ETH-XMR atomic swaps using the 1inch Fusion SDK and SwapCreatorAdapter contract
+- 🔄 **SwapD Integration**: Communicates with the SwapD daemon via JSON-RPC for XMR operations
+- 🌐 **RESTful API**: Provides a comprehensive API for creating and monitoring swaps
+- 🔍 **Status Tracking**: Monitors the status of swaps across both Ethereum and Monero networks
+
+### API Endpoints
+
+#### 1inch Fusion Endpoints
+- `POST /escrow`: Create a new escrow for an atomic swap
+- `GET /predict-escrow`: Predict an escrow address without submitting a transaction
+- `GET /escrow/:orderHash`: Get the status of an existing escrow
+
+#### SwapD Endpoints
+- `GET /swapd/offers`: Get all available swap offers from the network
+- `POST /swapd/offers`: Create a new swap offer
+- `POST /swapd/offers/:offerID/take`: Take an existing swap offer
+- `GET /swapd/swaps/ongoing`: Get ongoing swaps
+- `GET /swapd/swaps/past`: Get past swaps
+- `GET /swapd/swaps/:id/status`: Get swap status
+
+#### Integrated Endpoints
+- `POST /integrated/swap`: Create a complete XMR-ETH atomic swap using both 1inch and SwapD
+- `GET /integrated/swap/:orderHash/:swapId`: Get status of an integrated swap
+
+### Setup
+
+1. Navigate to the 1InchMicroservice directory
+2. Create a `.env` file based on `.env.example`
+3. Install dependencies: `npm install`
+4. Start the service: `npm start`
+
+The microservice requires both a running SwapD daemon and access to the Ethereum network via an RPC provider.
+
 ## 🚀 Deployed Contracts
 
 The following contracts have been deployed to Base Sepolia testnet:
