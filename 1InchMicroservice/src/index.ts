@@ -11,6 +11,10 @@ import express from 'express';
 import dotenv from 'dotenv';
 import * as ethers from 'ethers';
 import axios from 'axios';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
 import { 
   FusionSDK, 
   NetworkEnum, 
@@ -37,13 +41,40 @@ const DEV_PORTAL_API_TOKEN = process.env.ONEINCH_API_KEY || '';
 const SWAPD_RPC_URL = process.env.SWAPD_RPC_URL || 'http://127.0.0.1:5000';
 
 // Base Sepolia chain ID (for 1inch SDK)
-// Note: Base Sepolia might not be directly supported by 1inch Fusion SDK yet
-// We'll use Ethereum for now and handle the chain specifics separately
+// Note: 1inch Fusion SDK doesn't directly support Base yet, so we use ETHEREUM
+// as a fallback. In production, consider using direct API calls to 1inch if needed.
 const NETWORK = NetworkEnum.ETHEREUM;
+
+// Base Sepolia Chain ID - used for manual API calls if needed
+const BASE_SEPOLIA_CHAIN_ID = 84532;
 
 // Initialize Express app
 const app = express();
+
+// Add security and utility middleware
+app.use(helmet());
+app.use(cors());
 app.use(express.json());
+app.use(pinoHttp({
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true
+    }
+  }
+}));
+
+// Add rate limiting to protect against abuse
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please try again later.'
+});
+
+// Apply rate limiting to all routes
+app.use(apiLimiter);
 
 // Initialize Ethereum provider
 const provider = new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC_URL);
@@ -119,10 +150,61 @@ const swapCreatorAdapter = new ethers.Contract(
 ) as unknown as SwapCreatorAdapterInterface;
 
 /**
- * Health check endpoint
+ * Enhanced health check endpoint that pings both SwapD and 1inch
  */
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: '1Inch Microservice is running' });
+app.get('/health', async (req, res) => {
+  try {
+    // Check SwapD status
+    let swapdStatus = 'unknown';
+    try {
+      const pingResult = await swapdClient.ping();
+      swapdStatus = pingResult ? 'ok' : 'error';
+    } catch (error: unknown) {
+      swapdStatus = 'error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      req.log.error({ error: errorMessage }, 'SwapD health check failed');
+    }
+    
+    // Check 1inch API status
+    let oneinchStatus = 'unknown';
+    try {
+      const response = await axios.get('https://api.1inch.dev/healthcheck', {
+        headers: { 'Authorization': `Bearer ${DEV_PORTAL_API_TOKEN}` }
+      });
+      oneinchStatus = response.status === 200 ? 'ok' : 'error';
+    } catch (error: unknown) {
+      oneinchStatus = 'error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      req.log.error({ error: errorMessage }, '1inch health check failed');
+    }
+    
+    // Check provider status
+    let providerStatus = 'unknown';
+    try {
+      await provider.getBlockNumber();
+      providerStatus = 'ok';
+    } catch (error: unknown) {
+      providerStatus = 'error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      req.log.error({ error: errorMessage }, 'Provider health check failed');
+    }
+    
+    const overallStatus = swapdStatus === 'ok' && oneinchStatus === 'ok' && providerStatus === 'ok' ? 'ok' : 'degraded';
+    
+    res.status(overallStatus === 'ok' ? 200 : 207).json({
+      status: overallStatus,
+      components: {
+        swapd: swapdStatus,
+        oneinch: oneinchStatus,
+        provider: providerStatus
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    req.log.error({ error: errorMessage }, 'Health check failed');
+    res.status(500).json({ status: 'error', error: errorMessage });
+  }
 });
 
 /**
@@ -185,7 +267,7 @@ app.post('/escrow', async (req, res) => {
     const connectedContract = new ethers.Contract(
       SWAP_CREATOR_ADAPTER_ADDRESS,
       SWAP_CREATOR_ADAPTER_ABI,
-      wallet
+      wallet.connect(provider)
     ) as unknown as SwapCreatorAdapterInterface;
     
     // Step 6: Encode the extra data for the createEscrow function
@@ -194,18 +276,33 @@ app.post('/escrow', async (req, res) => {
       [claimCondition, refundCondition, nonce]
     );
     
-    // Step 7: Call createEscrow function with appropriate parameters
-    // The parameters match the IEscrowSrc interface
+    // Step 7: Prepare transaction parameters
+    // Generate a unique salt based on the order hash to ensure uniqueness
+    const salt = ethers.keccak256(ethers.toUtf8Bytes(`salt-${orderInfo.orderHash}-${Date.now()}`));
+    const recipientAddress = req.body.recipient || walletAddress;
+    const deadlineTimestamp = Math.floor(Date.now() / 1000) + (req.body.deadline || 3600); // Default 1 hour
+    
+    // Ensure amount is properly handled as wei
+    const amountBigInt = ethers.getBigInt(amount.toString());
+    
+    // Only include value if we're dealing with native ETH
+    const txOptions: ethers.Overrides = {};
+    if (fromTokenAddress === ethers.ZeroAddress) {
+      txOptions.value = amountBigInt;
+    }
+    
+    // Step 8: Call createEscrow function with appropriate parameters
+    console.log('Creating escrow with SwapCreatorAdapter...');
     const tx = await connectedContract.createEscrow(
-      ethers.ZeroHash, // salt (not used by SwapCreatorAdapter)
-      recipient || walletAddress, // recipient
-      amount, // amount
-      fromTokenAddress, // srcToken
-      toTokenAddress, // dstToken
-      Math.floor(Date.now() / 1000) + 3600, // deadline (1 hour from now)
-      0, // delay (not used by SwapCreatorAdapter)
+      salt,
+      recipientAddress,
+      amountBigInt,
+      fromTokenAddress,
+      toTokenAddress,
+      deadlineTimestamp,
+      0, // No delay for now, can be parameterized later
       extraData, // extraData containing claim and refund conditions
-      { value: amount } // Send ETH with the transaction if dealing with ETH
+      txOptions
     );
     
     // Step 8: Wait for transaction confirmation

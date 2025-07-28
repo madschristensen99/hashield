@@ -199,6 +199,19 @@ export class SwapDClient {
   }> {
     return this.call('personal_balances', {});
   }
+
+  /**
+   * Simple ping method to check if SwapD daemon is accessible
+   */
+  async ping(): Promise<boolean> {
+    try {
+      // Call a lightweight method to check connectivity
+      await this.call('swap_suggestedExchangeRate', {});
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 }
 
 export default SwapDClient;
