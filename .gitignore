@@ -1,0 +1,46 @@
+# Environment variables
+.env
+
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Node modules
+node_modules/
+
+# Coverage
+coverage/
+coverage.json
+
+# Hardhat files
+artifacts/
+cache_hardhat/
+
+# Debug files
+*.log
+
+# Local development files
+.DS_Store
+.vscode/
+
+# Deployment artifacts
+deployments/
+
+# Foundry specific
+.gas-snapshot
+lcov.info
+
+# Temporary files
+*.swp
+*.swo
