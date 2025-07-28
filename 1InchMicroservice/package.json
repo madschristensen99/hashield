@@ -1,0 +1,35 @@
+{
+  "name": "1inch-microservice",
+  "version": "1.0.0",
+  "description": "Microservice for handling 1inch protocol integration with PrivateRPC",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "1inch",
+    "ethereum",
+    "swap",
+    "microservice"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@1inch/fusion-sdk": "^2.3.5",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.1.0",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
