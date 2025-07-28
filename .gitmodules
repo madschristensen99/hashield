@@ -4,3 +4,6 @@
 [submodule "contracts/cross-chain-swap"]
 	path = contracts/cross-chain-swap
 	url = https://github.com/1inch/cross-chain-swap.git
+[submodule "xmr-eth-atomic-swap"]
+	path = xmr-eth-atomic-swap
+	url = https://github.com/madschristensen99/xmr-eth-atomic-swap.git
