@@ -6,6 +6,15 @@ Replace any Ethereum RPC endpoint with pRPC and your MetaMask (or any EIP-1193 w
   <img src="assets/logo.jpg" alt="PrivateRPC Logo">
 </p>
 
+## How it works:
+Only the following four methods are intercepted and re-written; all others are forwarded verbatim to the real Base-Sepolia node.
+| Method                | Interception Logic                                                    | Return Value    |
+| --------------------- | --------------------------------------------------------------------- | --------------- |
+| `eth_getBalance`      | Query real balance, subtract **locked ETH** in `SwapCreator`          | `real - locked` |
+| `eth_sendTransaction` | If `tx.to == SwapCreatorAdapter` → **atomic swap flow**; else forward | swap tx hash    |
+| `eth_call`            | If calldata is `createEscrow` → fake success; else forward            | `0x` / success  |
+| `eth_estimateGas`     | If calldata is `createEscrow` → fixed 200 k gas; else forward         | `0x30d40`       |
+
 ## 🔄 1Inch Microservice
 
 The 1Inch Microservice is a TypeScript-based bridge between the 1inch Fusion SDK and the SwapD JSON-RPC API, enabling seamless atomic swaps between ETH and XMR.
