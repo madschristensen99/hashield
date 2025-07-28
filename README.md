@@ -21,7 +21,7 @@ The 1Inch Microservice is a TypeScript-based bridge between the 1inch Fusion SDK
 
 ### Features
 
-- 🔒 **Atomic Swaps**: Facilitates trustless ETH-XMR atomic swaps using the 1inch Fusion SDK and SwapCreatorAdapter contract
+- 🔒 **Atomic Swaps**: Facilitates trustless ETH-XMR atomic swaps using the 1inch Fusion SDK, Lit Protocol, and SwapCreatorAdapter contract
 - 🔄 **SwapD Integration**: Communicates with the SwapD daemon via JSON-RPC for XMR operations
 - 🌐 **RESTful API**: Provides a comprehensive API for creating and monitoring swaps
 - 🔍 **Status Tracking**: Monitors the status of swaps across both Ethereum and Monero networks
