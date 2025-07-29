@@ -13,3 +13,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
+[submodule "contracts/limit-order-protocol"]
+	path = contracts/limit-order-protocol
+	url = https://github.com/1inch/limit-order-protocol.git
