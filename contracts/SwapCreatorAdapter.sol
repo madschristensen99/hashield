@@ -115,7 +115,7 @@ contract SwapCreatorAdapter is IEscrowSrc {
         bytes32 swapID = orderToSwapID[orderHash];
         require(swapID != bytes32(0), "Unknown order");
         
-        // Get the current stage
+        // Get the current stage and check if the swap is claimable
         SwapCreator.Stage stage = SC.swaps(swapID);
         
         // Ensure the swap is in READY state or still PENDING
@@ -130,6 +130,8 @@ contract SwapCreatorAdapter is IEscrowSrc {
         
         // Reconstruct the Swap struct
         SwapCreator.Swap memory swap = _getSwapStruct(swapID);
+        
+        // We'll use the regular claim method since we are the claimer in the SwapCreator contract
         
         // Track balances before claiming
         uint256 ethBalanceBefore = address(this).balance;
@@ -266,7 +268,4 @@ contract SwapCreatorAdapter is IEscrowSrc {
     function PROXY_BYTECODE_HASH() external pure returns (bytes32) { return bytes32(0); }
     function RESCUE_DELAY() external pure returns (uint256) { return 0; }
     function FACTORY() external view returns (address) { return address(this); }
-    
-    // Fallback function to receive ETH
-    receive() external payable {}
 }
