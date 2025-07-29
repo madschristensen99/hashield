@@ -1,3 +1,15 @@
 [submodule "xmr-eth-atomic-swaps"]
 	path = xmr-eth-atomic-swaps
 	url = https://github.com/madschristensen99/xmr-eth-atomic-swap
+[submodule "contracts/cross-chain-swap"]
+	path = contracts/cross-chain-swap
+	url = https://github.com/1inch/cross-chain-swap.git
+[submodule "contracts/atomic-swap/forge-std"]
+	path = contracts/atomic-swap/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std.git
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
