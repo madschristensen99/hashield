@@ -98,19 +98,87 @@ contract SwapCreatorAdapter is IEscrowSrc {
     /* --------------------------------------------------------
        2.  Implement withdraw functions
        -------------------------------------------------------- */
+    // Standard withdraw function from IBaseEscrow
     function withdraw(bytes32 secret, IBaseEscrow.Immutables calldata immutables) external {
-        _withdrawInternal(secret, immutables.orderHash, msg.sender);
+        _withdrawInternal(immutables.orderHash, secret, payable(msg.sender));
     }
     
-    function withdrawTo(bytes32 secret, address recipient, IEscrow.Immutables calldata immutables) external {
-        _withdrawInternal(secret, immutables.orderHash, recipient);
+    // WithdrawTo function from IEscrowSrc
+    function withdrawTo(bytes32 secret, address target, IEscrow.Immutables calldata immutables) external {
+        _withdrawInternal(immutables.orderHash, secret, payable(target));
     }
     
+    // PublicWithdraw function from IEscrowSrc
+    // This allows anyone to withdraw after the second timeout period
     function publicWithdraw(bytes32 secret, IBaseEscrow.Immutables calldata immutables) external {
-        _withdrawInternal(secret, immutables.orderHash, msg.sender);
+        bytes32 orderHash = immutables.orderHash;
+        bytes32 swapID = orderToSwapID[orderHash];
+        require(swapID != bytes32(0), "Swap not found");
+        
+        // Get the swap parameters
+        SwapParams memory params = swapParams[swapID];
+        
+        // For public withdrawal, we need to be past the second timeout
+        require(block.timestamp > params.timeout2, "Public withdrawal period not reached");
+        
+        // Convert the Address type to address by using the raw bytes20 value
+        address takerAddress = address(uint160(bytes20(abi.encodePacked(immutables.taker))));
+        
+        // Anyone can trigger the withdrawal, but funds go to the taker
+        _withdrawInternal(orderHash, secret, payable(takerAddress));
     }
     
-    function _withdrawInternal(bytes32 secret, bytes32 orderHash, address recipient) internal {
+    // Support withdrawal with relayer for privacy-preserving transfers
+    // This is an additional function not in the interface but useful for privacy
+    function withdrawWithRelayer(
+        bytes32 orderHash, 
+        bytes32 secret, 
+        address payable relayer, 
+        uint256 fee,
+        uint32 salt,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        // Get the swapID from the orderHash
+        bytes32 swapID = orderToSwapID[orderHash];
+        require(swapID != bytes32(0), "Swap not found");
+        
+        // Get the current stage and check if the swap is claimable
+        SwapCreator.Stage stage = SC.swaps(swapID);
+        require(stage == SwapCreator.Stage.READY || stage == SwapCreator.Stage.PENDING, "Swap not claimable");
+        
+        // If PENDING, we can't proceed
+        if (stage == SwapCreator.Stage.PENDING) {
+            revert("Swap not ready - owner must call setReady");
+        }
+        
+        // Reconstruct the Swap struct
+        SwapCreator.Swap memory swap = _getSwapStruct(swapID);
+        
+        // Create the RelaySwap struct for the relayer claim
+        SwapCreator.RelaySwap memory relaySwap = SwapCreator.RelaySwap({
+            swap: swap,
+            fee: fee,
+            relayerHash: keccak256(abi.encodePacked(relayer, salt)),
+            swapCreator: address(SC)
+        });
+        
+        // Call claimRelayer with the provided signature
+        SC.claimRelayer(
+            relaySwap,
+            secret,
+            relayer,
+            salt,
+            v,
+            r,
+            s
+        );
+        
+        emit WithdrawExecuted(orderHash, swapID, relayer);
+    }
+    
+    function _withdrawInternal(bytes32 orderHash, bytes32 secret, address recipient) internal {
         // Get the swapID from orderHash
         bytes32 swapID = orderToSwapID[orderHash];
         require(swapID != bytes32(0), "Unknown order");
@@ -171,15 +239,43 @@ contract SwapCreatorAdapter is IEscrowSrc {
     /* --------------------------------------------------------
        3.  Implement cancel and rescue functions
        -------------------------------------------------------- */
-    function cancel(IBaseEscrow.Immutables calldata immutables) external view {
-        _cancelInternal(immutables.orderHash, msg.sender);
+    function cancel(IBaseEscrow.Immutables calldata immutables) external {
+        _cancelInternal(immutables.orderHash, msg.sender, bytes32(0));
     }
     
-    function publicCancel(IBaseEscrow.Immutables calldata immutables) external view {
-        _cancelInternal(immutables.orderHash, msg.sender);
+    // PublicCancel function from IEscrowSrc
+    // In the 1inch protocol, this would allow anyone to cancel after a timeout
+    // However, SwapCreator only allows the owner to call refund, so we need to adapt
+    function publicCancel(IBaseEscrow.Immutables calldata immutables) external {
+        bytes32 orderHash = immutables.orderHash;
+        bytes32 swapID = orderToSwapID[orderHash];
+        require(swapID != bytes32(0), "Swap not found");
+        
+        // Get the swap parameters
+        SwapParams memory params = swapParams[swapID];
+        
+        // For public cancellation, we need to be past the first timeout
+        require(block.timestamp > params.timeout1, "Public cancellation period not reached");
+        
+        // Reconstruct the Swap struct
+        SwapCreator.Swap memory swap = _getSwapStruct(swapID);
+        
+        // SwapCreator only allows the owner to call refund
+        // Check if the caller is the owner
+        require(params.owner == msg.sender, "Only owner can cancel, even after timeout");
+        
+        // Call refund with empty secret (will check timeout)
+        SC.refund(swap, bytes32(0));
+        
+        emit CancelExecuted(orderHash, swapID);
     }
     
-    function _cancelInternal(bytes32 orderHash, address caller) internal view {
+    // Additional function to support refund with secret
+    function cancelWithSecret(bytes32 orderHash, bytes32 refundSecret) external {
+        _cancelInternal(orderHash, msg.sender, refundSecret);
+    }
+    
+    function _cancelInternal(bytes32 orderHash, address caller, bytes32 refundSecret) internal {
         // Get the swapID from orderHash
         bytes32 swapID = orderToSwapID[orderHash];
         require(swapID != bytes32(0), "Unknown order");
@@ -190,40 +286,65 @@ contract SwapCreatorAdapter is IEscrowSrc {
         // Ensure the swap is not already completed
         require(stage != SwapCreator.Stage.COMPLETED, "Swap already completed");
         
-        // Reconstruct the Swap struct
-        SwapCreator.Swap memory swap = _getSwapStruct(swapID);
+        // Get the swap parameters
+        SwapParams memory params = swapParams[swapID];
         
-        // Only the owner can refund
-        require(swap.owner == caller, "Only owner can cancel");
-        
-        // For refund, we need the refund secret
-        // In a real implementation, the owner would need to provide this
-        revert("To cancel, call refundWithSecret");
-    }
-    
-    // Function to refund with the refund secret
-    function refundWithSecret(bytes32 orderHash, bytes32 refundSecret) external {
-        // Get the swapID from orderHash
-        bytes32 swapID = orderToSwapID[orderHash];
-        require(swapID != bytes32(0), "Unknown order");
+        // For cancellation, the caller must be the owner
+        require(params.owner == caller, "Only owner can cancel");
         
         // Reconstruct the Swap struct
         SwapCreator.Swap memory swap = _getSwapStruct(swapID);
         
-        // Only the owner can refund
-        require(swap.owner == msg.sender, "Only owner can refund");
-        
-        // Call refund with the provided refund secret
-        SC.refund(swap, refundSecret);
+        // If refundSecret is provided, use it for refund
+        if (refundSecret != bytes32(0)) {
+            // Call refund with the provided secret
+            SC.refund(swap, refundSecret);
+        } else {
+            // Otherwise, ensure the timeout has passed
+            require(block.timestamp > params.timeout1, "Timeout not reached");
+            
+            // Call refund with empty secret (will check timeout)
+            SC.refund(swap, bytes32(0));
+        }
         
         emit CancelExecuted(orderHash, swapID);
     }
     
-    function rescueFunds(address, uint256, IBaseEscrow.Immutables calldata) external pure {
-        // This would be used for emergency fund recovery
-        // Not directly supported by SwapCreator, so we revert
-        revert("Use refundWithSecret instead");
+    // Implement rescueFunds from IBaseEscrow interface
+    function rescueFunds(address token, uint256 amount, IBaseEscrow.Immutables calldata immutables) external {
+        // In our implementation, rescueFunds is similar to cancel but with specific token and amount
+        bytes32 orderHash = immutables.orderHash;
+        bytes32 swapID = orderToSwapID[orderHash];
+        require(swapID != bytes32(0), "Unknown order");
+        
+        // Get the swap parameters
+        SwapParams memory params = swapParams[swapID];
+        
+        // Only the taker (as defined in immutables) can rescue funds
+        // Convert the Address type to address by using the raw bytes20 value
+        address takerAddress = address(uint160(bytes20(abi.encodePacked(immutables.taker))));
+        require(takerAddress == msg.sender, "Only taker can rescue funds");
+        
+        // Ensure the timeout has passed (RESCUE_DELAY is 0 in our implementation)
+        require(block.timestamp > params.timeout1, "Timeout not reached");
+        
+        // Reconstruct the Swap struct
+        SwapCreator.Swap memory swap = _getSwapStruct(swapID);
+        
+        // Verify the token matches the swap's asset
+        if (token == address(0)) {
+            require(swap.asset == address(0), "Asset mismatch");
+        } else {
+            require(swap.asset == token, "Asset mismatch");
+        }
+        
+        // Call refund with empty secret (will check timeout)
+        SC.refund(swap, bytes32(0));
+        
+        emit FundsRescued(token, amount);
     }
+    
+    // No duplicate function needed
     
     /* --------------------------------------------------------
        4.  Helper functions
