@@ -8,6 +8,12 @@ Hashield is a privacy-by-default web3 wallet browser extension built on Monero-E
 - ETH ↔ XMR atomic swap protocol for trustless cross-chain transactions
 - 1inch cross-chain swap interfaces for enhanced interoperability
 
+To make this project I smashed together three existing projects: 
+
+- [Hashlocked](https://ethglobal.com/showcase/hashlocked-jwaq6) – Fusion + BTC<>EVM Swaps
+- [PrivacyLinks](https://ethglobal.com/showcase/privacylinks-y30gr) – Chromium web3 extension providing automatic address cycling
+- [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocolHashield is a privacy-by-default 
+
 The end result is a privacy-focused web3 wallet that enables secure, atomic swaps between EVM chains and Monero.
 
 - **EVM Side**: Smart contracts with deterministic factory deployment and adapter pattern
