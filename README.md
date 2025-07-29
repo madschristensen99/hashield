@@ -2,16 +2,16 @@
 
 ## 🏗️ Project Overview
 
-To make this project I smashed together three existing projects: 
+Hashield is a privacy-by-default web3 wallet browser extension built on Monero-Ethereum atomic swaps. It combines:
 
-- [Hashlocked](https://ethglobal.com/showcase/hashlocked-jwaq6) – Fusion + BTC<>EVM Swaps
-- [PrivacyLinks](https://ethglobal.com/showcase/privacylinks-y30gr) – Chromium web3 extension providing automatic address cycling
-- [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocol
+- Chromium web3 extension providing automatic address cycling for privacy
+- ETH ↔ XMR atomic swap protocol for trustless cross-chain transactions
+- 1inch cross-chain swap interfaces for enhanced interoperability
 
-The end result is a privacy-by-default web3 wallet browser extension. 
+The end result is a privacy-focused web3 wallet that enables secure, atomic swaps between EVM chains and Monero.
 
 - **EVM Side**: Smart contracts with deterministic factory deployment and adapter pattern
-- **Monero Side**: Native Monero cryptographic primitives (adapter signatures) for secure transactions
+- **Monero Side**: Native Monero cryptographic primitives for secure transactions
 - **Atomic Guarantee**: Either both parties get their desired assets, or both get refunded
 
 ### 🔄 Supported Swap Directions
@@ -22,99 +22,70 @@ The end result is a privacy-by-default web3 wallet browser extension.
 ## 🧱 Technical Components
 
 ### Smart Contracts (EVM)
-- `XMREscrowFactory`: Creates escrow contracts using deterministic deployment (Create2)
-- `XMREscrowSrc`: Source escrow for XMR→EVM swaps
-- `XMREscrowDst`: Destination escrow for EVM→XMR swaps
-- `XMRSwapAdapter`: Adapter contract connecting escrows with the SwapCreator
-- `SwapCreator`: Existing implementation of ETH-XMR atomic swap contract
+- `SwapCreatorAdapter`: Adapter contract connecting with 1inch cross-chain swap interfaces
+- `SwapCreator`: Implementation of ETH-XMR atomic swap contract
 - **Deployed on Base Sepolia**: Check deployment files for latest addresses
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
-- ✅ **1-inch Compatible**: Deposit wrapper interface for aggregator compatibility
-- ✅ **Deterministic Deployment**: Create2 for predictable contract addresses
+- ✅ **1-inch Compatible**: Interface compatibility for aggregator integration
 - ✅ **Privacy-Preserving**: Works with Monero's privacy features
-- ✅ **Gas Optimized**: Minimal proxy pattern for efficient deployment
+- ✅ **Cross-Chain**: Atomic swaps between EVM chains and Monero
 
-## 🚀 Quick Start
+## 🚀 Development Setup
 
 ### Prerequisites
 ```bash
-# Node.js 18+
-node --version
-
 # Git
 git --version
-```
 
-### Environment Setup
-Create `.env` file:
-```bash
-# EVM Configuration
-PRIVATE_KEY=your_ethereum_private_key
-BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-ETHERSCAN_API_KEY=your_etherscan_key
-BASESCAN_API_KEY=your_basescan_key
-
-# Monero Configuration
-MONERO_WALLET_RPC=http://localhost:18083/json_rpc
-MONERO_DAEMON_RPC=http://localhost:18081/json_rpc
-MONERO_WALLET_PASSWORD=your_wallet_password
+# Foundry
+forge --version
 ```
 
 ### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/madschristensen99/hashield/
+# Clone the repository with submodules
+git clone https://github.com/madschristensen99/hashield.git
 cd hashield
+git submodule update --init --recursive
 
-# Install dependencies
-npm install
+# If you're setting up from scratch, add the required submodules:
+git submodule add https://github.com/1inch/cross-chain-swap.git contracts/cross-chain-swap
+git submodule add https://github.com/foundry-rs/forge-std.git lib/forge-std
+git submodule add https://github.com/OpenZeppelin/openzeppelin-contracts.git lib/openzeppelin-contracts
 
-# Compile contracts
-cd evm
-npx hardhat compile
+# Initialize and update submodules within cross-chain-swap
+cd contracts/cross-chain-swap && git submodule init && git submodule update
+cd ../..
+
+# Initialize and update submodules within xmr-eth-atomic-swaps
+cd xmr-eth-atomic-swaps && git submodule init && git submodule update
+cd ..
 ```
 
-## 💱 Swap Flows
-
-### 🔵 EVM → XMR Flow
-
-**Participants**: MAKER (provides ETH/ERC20), TAKER (provides XMR)
-
+### Compiling Contracts
 ```bash
-# 1. Deploy contracts if needed
-npx hardhat run scripts/deploy-xmr.ts --network base-sepolia
+# Compile all contracts
+forge build
 
-# 2. MAKER creates escrow with funds
-npx hardhat run scripts/create-src-escrow.ts --network base-sepolia
-
-# 3. TAKER sends XMR to MAKER's Monero address
-# (Using Monero wallet software)
-
-# 4. MAKER verifies XMR transaction and reveals secret
-npx hardhat run scripts/reveal-secret.ts --network base-sepolia
-
-# 5. TAKER claims ETH/ERC20 using revealed secret
-npx hardhat run scripts/claim-src-escrow.ts --network base-sepolia
+# Compile specific contracts
+forge build --contracts contracts/SwapCreatorAdapter.sol
 ```
 
-### 🔴 XMR → EVM Flow
-
-**Participants**: MAKER (provides XMR), TAKER (provides ETH/ERC20)
-
+### Testing
 ```bash
-# 1. TAKER creates escrow with funds
-npx hardhat run scripts/create-dst-escrow.ts --network base-sepolia
+# Run tests
+forge test
 
-# 2. MAKER sends XMR to TAKER's Monero address
-# (Using Monero wallet software)
+# Run tests with verbosity
+forge test -vvv
+```
 
-# 3. MAKER provides proof of XMR payment
-npx hardhat run scripts/record-xmr-tx.ts --network base-sepolia
-
-# 4. TAKER verifies XMR transaction and releases ETH/ERC20
-npx hardhat run scripts/claim-dst-escrow.ts --network base-sepolia
+### Deployment
+```bash
+# Deploy to Base Sepolia
+./deploy-direct.sh
 ```
 
 ## 🔐 Cryptographic Flow
@@ -133,18 +104,22 @@ npx hardhat run scripts/claim-dst-escrow.ts --network base-sepolia
 
 ## 🔧 Configuration
 
-### Timelock Settings
-```javascript
-timelock: {
-  withdrawalPeriod: 3600,     // 1 hour until withdrawal allowed
-  cancellationPeriod: 86400   // 24 hour safety period before refund
-}
-```
-
 ### Network Support
 - **EVM**: Base Sepolia (testnet), easily extendable to mainnet and other EVM chains
 - **Monero**: Stagenet, ready for mainnet
 
+## 📁 Project Structure
 
-ls btc/output/htlc_*_testnet4.json
+```
+hashield/
+├── contracts/                  # Smart contracts
+│   ├── SwapCreatorAdapter.sol  # Adapter for 1inch interfaces
+│   ├── atomic-swap/            # Symbolic link to xmr-eth-atomic-swaps/ethereum
+│   └── cross-chain-swap/       # 1inch cross-chain-swap submodule
+├── lib/                        # External libraries
+│   ├── forge-std/              # Foundry standard library
+│   └── openzeppelin-contracts/ # OpenZeppelin contracts
+├── xmr-eth-atomic-swaps/       # Atomic swap implementation
+├── extension/                  # Browser extension code
+└── foundry.toml                # Foundry configuration
 ```
