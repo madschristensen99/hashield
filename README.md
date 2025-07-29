@@ -79,9 +79,14 @@ forge build
 
 # Compile specific contracts (recommended approach)
 forge build --contracts contracts/SwapCreatorAdapter.sol --skip cross-chain-swap
+
+# Compile with IR pipeline to resolve stack too deep errors
+forge build --contracts contracts/SwapCreatorAdapter.sol --skip cross-chain-swap --via-ir
 ```
 
 > **Note**: Due to dependency issues in the cross-chain-swap submodule, you should use the `--skip cross-chain-swap` flag when compiling or deploying contracts. This skips the problematic dependencies while still correctly compiling our contracts.
+
+> **Important**: The SwapCreatorAdapter contract requires the `--via-ir` flag for compilation due to its complexity. The IR-based compiler pipeline helps resolve "Stack too deep" errors by using a more sophisticated intermediate representation and better register allocation.
 
 ### Testing
 ```bash
@@ -98,8 +103,10 @@ forge test -vvv
 ./deploy-direct.sh
 
 # Manual deployment with the --skip flag
-forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter --skip cross-chain-swap --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
+forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter --skip cross-chain-swap --via-ir --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
 ```
+
+> **Note**: The `--via-ir` flag is required when deploying the SwapCreatorAdapter contract to use Solidity's IR-based compiler pipeline, which resolves stack too deep errors.
 
 ## 🔐 Cryptographic Flow
 
