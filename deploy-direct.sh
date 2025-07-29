@@ -16,11 +16,12 @@ if [ -z "$PRIVATE_KEY" ]; then
 fi
 
 echo "Deploying SwapCreator..."
-SWAP_CREATOR_ADDRESS=$(forge create --rpc-url base_sepolia \
+SWAP_CREATOR_ADDRESS=$(forge create contracts/atomic-swap/ethereum/contracts/SwapCreator.sol:SwapCreator \
+  --rpc-url base_sepolia \
   --private-key $PRIVATE_KEY \
   --legacy \
   --broadcast \
-  contracts/atomic-swap/ethereum/contracts/SwapCreator.sol:SwapCreator \
+  --skip cross-chain-swap \
   | grep "Deployed to" | awk '{print $3}')
 
 if [ -z "$SWAP_CREATOR_ADDRESS" ]; then
@@ -31,11 +32,12 @@ fi
 echo "SwapCreator deployed at: $SWAP_CREATOR_ADDRESS"
 
 echo "Deploying SwapCreatorAdapter..."
-forge create --rpc-url base_sepolia \
+forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
+  --rpc-url base_sepolia \
   --private-key $PRIVATE_KEY \
   --legacy \
   --broadcast \
-  contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
+  --skip cross-chain-swap \
   --constructor-args $SWAP_CREATOR_ADDRESS
 
 echo "Deployment completed!"

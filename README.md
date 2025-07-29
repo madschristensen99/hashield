@@ -74,12 +74,14 @@ cd ..
 
 ### Compiling Contracts
 ```bash
-# Compile all contracts
+# Compile all contracts (may have dependency issues)
 forge build
 
-# Compile specific contracts
-forge build --contracts contracts/SwapCreatorAdapter.sol
+# Compile specific contracts (recommended approach)
+forge build --contracts contracts/SwapCreatorAdapter.sol --skip cross-chain-swap
 ```
+
+> **Note**: Due to dependency issues in the cross-chain-swap submodule, you should use the `--skip cross-chain-swap` flag when compiling or deploying contracts. This skips the problematic dependencies while still correctly compiling our contracts.
 
 ### Testing
 ```bash
@@ -92,8 +94,11 @@ forge test -vvv
 
 ### Deployment
 ```bash
-# Deploy to Base Sepolia
+# Deploy to Base Sepolia using the script
 ./deploy-direct.sh
+
+# Manual deployment with the --skip flag
+forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter --skip cross-chain-swap --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
 ```
 
 ## 🔐 Cryptographic Flow
