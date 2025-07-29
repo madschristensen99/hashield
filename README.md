@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="extension/public/iconHashield.jpg" alt="Hashield Logo" width="200"/>
+</div>
+
 # 🛡️ Hashield: Private web3 browsing built on Monero-Ethereum atomic swaps
 
 ## 🏗️ Project Overview
