@@ -1,9 +1,9 @@
 {
   "network": "baseSepolia",
-  "factoryAddress": "0xA508AA1716b01E965a213507107F4C49E33Ce309",
-  "accessTokenAddress": "0x55A85aE0A42498FbAff97A83750aBB93274B92EC",
-  "srcImplementation": "0x75fD664B231Df5e2506f69d57fa03F1A0B0399b5",
-  "swapCreatorAddress": "0xf86B24804DD2C12E4EfD73591d78dad36C30aF46",
-  "swapAdapterAddress": "0xDD94Bad2257f5B14417FB475D7d104A96B98Cf59",
-  "timestamp": "2025-07-25T19:23:52.003Z"
+  "factoryAddress": "0x23fd58d76133aa74176Ec3f282576f42E6e30eb6",
+  "accessTokenAddress": "0x5183c1f032bEa5CB51Fa3b337d29E1660A403F6c",
+  "srcImplementation": "0xB7B7520aAd9E680CfCcdab39337a030707A05DAB",
+  "swapCreatorAddress": "0x1182005572533c41284Fd66baF5952133bF4d7a9",
+  "swapAdapterAddress": "0x29E74fba1F96d9b88DB9B8FB491043bc4CffC315",
+  "timestamp": "2025-07-27T18:56:58.994Z"
 }

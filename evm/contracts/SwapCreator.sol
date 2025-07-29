@@ -106,29 +106,34 @@ contract SwapCreator is Secp256k1 {
     // thrown when trying to initiate a swap with an ID that already exists
     error SwapAlreadyExists();
 
-    // thrown when trying to access a swap that doesn't exist
-    error InvalidSwap();
+    // thrown when trying to call `setReady` on a swap that is not in the
+    // PENDING stage
+    error SwapNotPending();
 
-    // thrown when trying to access a swap that is already completed
-    error SwapCompleted();
-
-    // thrown when trying to call `setReady` or `refund` from an address that
-    // isn't the swap owner
+    // thrown when the caller of `setReady` or `refund` is not the swap owner
     error OnlySwapOwner();
 
-    // thrown when trying to call `claim` from an address that isn't the swap
+    // thrown when the signer of the relayed transaction is not the swap's
     // claimer
     error OnlySwapClaimer();
 
-    // thrown when trying to call `claim` before timeout1 and the swap isn't
-    // ready
+    // thrown when trying to call `claim` or `refund` on an invalid swap
+    error InvalidSwap();
+
+    // thrown when trying to call `claim` or `refund` on a swap that's already
+    // completed
+    error SwapCompleted();
+
+    // thrown when trying to call `claim` on a swap that's not set to ready or
+    // the first timeout has not been reached
     error TooEarlyToClaim();
 
-    // thrown when trying to call `claim` after timeout2
+    // thrown when trying to call `claim` on a swap where the second timeout has
+    // been reached
     error TooLateToClaim();
 
-    // thrown when trying to call `refund` after timeout1 but before timeout2,
-    // and the swap is ready or timeout1 has passed
+    // thrown when it's the counterparty's turn to claim and refunding is not
+    // allowed
     error NotTimeToRefund();
 
     // thrown when the provided secret does not match its expected public key
@@ -143,14 +148,22 @@ contract SwapCreator is Secp256k1 {
     error InvalidContractAddress();
 
     // thrown when the hash of the relayer address and salt passed to
-    // `claimRelayer` doesn't match the relayerHash in the RelaySwap
+    // `claimRelayer` does not match the relayer hash in `RelaySwap`
     error InvalidRelayerAddress();
 
-    // Alice calls `newSwap` to create a swap with Bob. Alice must provide
-    // _value of the native currency (if _asset is address(0)) or _value of the
-    // token at address _asset. Alice must also provide a _claimCommitment that
-    // Bob will need to claim the swap, and a _refundCommitment that Alice will
-    // need to refund the swap if Bob doesn't claim it.
+    // `newSwap` creates a new Swap instance using the passed parameters and
+    // locks Alice's native EVM currency or token asset in the contract. On
+    // success, the swap ID is returned.
+    //
+    // Note that the duration values are distinct from the timeout values:
+    //
+    //   _timeoutDuration1:
+    //      duration, in seconds, between the current block timestamp and
+    //      timeout1
+    //
+    //   _timeoutDuration2:
+    //      duration, in seconds, between timeout1 and timeout2
+    //
     function newSwap(
         bytes32 _claimCommitment,
         bytes32 _refundCommitment,
@@ -166,26 +179,29 @@ contract SwapCreator is Secp256k1 {
             if (_value != msg.value) revert InvalidValue();
         } else {
             // transfer the token amount to this contract
-            if (msg.value != 0) revert InvalidValue();
+            // WARN: fee-on-transfer tokens are not supported
             IERC20(_asset).safeTransferFrom(msg.sender, address(this), _value);
         }
+
         if (_claimCommitment == 0 || _refundCommitment == 0) revert InvalidSwapKey();
         if (_claimer == address(0)) revert InvalidClaimer();
         if (_timeoutDuration1 == 0 || _timeoutDuration2 == 0) revert InvalidTimeout();
 
         Swap memory swap = Swap({
             owner: payable(msg.sender),
-            claimer: _claimer,
             claimCommitment: _claimCommitment,
             refundCommitment: _refundCommitment,
+            claimer: _claimer,
             timeout1: block.timestamp + _timeoutDuration1,
-            timeout2: block.timestamp + _timeoutDuration2,
+            timeout2: block.timestamp + _timeoutDuration1 + _timeoutDuration2,
             asset: _asset,
             value: _value,
             nonce: _nonce
         });
 
         bytes32 swapID = keccak256(abi.encode(swap));
+
+        // ensure that we are not overriding an existing swap
         if (swaps[swapID] != Stage.INVALID) revert SwapAlreadyExists();
 
         emit New(
@@ -205,28 +221,26 @@ contract SwapCreator is Secp256k1 {
     // locked his swap funds.
     function setReady(Swap memory _swap) public {
         bytes32 swapID = keccak256(abi.encode(_swap));
-        Stage swapStage = swaps[swapID];
-        if (swapStage == Stage.INVALID) revert InvalidSwap();
-        if (swapStage == Stage.COMPLETED) revert SwapCompleted();
+        if (swaps[swapID] != Stage.PENDING) revert SwapNotPending();
         if (_swap.owner != msg.sender) revert OnlySwapOwner();
-        if (block.timestamp >= _swap.timeout1) revert NotTimeToRefund();
-
         swaps[swapID] = Stage.READY;
         emit Ready(swapID);
     }
 
-    // Bob calls `claim` to claim the swap funds.
+    // Bob can call `claim` if either of these hold true:
+    // (1) Alice has set the swap to `ready` and it's before timeout1
+    // (2) It is between timeout1 and timeout2
     function claim(Swap memory _swap, bytes32 _secret) public {
-        if (_swap.claimer != msg.sender) revert OnlySwapClaimer();
-
+        if (msg.sender != _swap.claimer) revert OnlySwapClaimer();
         _claim(_swap, _secret);
 
-        // send asset to swap claimer
         if (_swap.asset == address(0)) {
+            // Transfer the swap value as the EVM's native currency
             _swap.claimer.transfer(_swap.value);
         } else {
-            // WARN: this will FAIL for fee-on-transfer or rebasing tokens if the token
-            // transfer reverts (i.e. if this contract does not
+            // Transfer the swap value as a token amount.
+            // WARNING: this will FAIL for fee-on-transfer or rebasing tokens if
+            // the token transfer reverts (i.e. if this contract does not
             // contain _swap.value tokens), exposing Bob's secret while giving
             // him nothing.
             IERC20(_swap.asset).safeTransfer(_swap.claimer, _swap.value);

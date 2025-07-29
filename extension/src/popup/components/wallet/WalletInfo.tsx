@@ -2,8 +2,13 @@ import React from 'react';
 import { useWallet } from '../../context/WalletContext';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
+import { colors } from '../../styles/theme';
 
-export const WalletInfo: React.FC = () => {
+interface WalletInfoProps {
+  compact?: boolean;
+}
+
+export const WalletInfo: React.FC<WalletInfoProps> = ({ compact = false }) => {
   const { 
     walletInfo, 
     showSessionList, 
@@ -19,10 +24,56 @@ export const WalletInfo: React.FC = () => {
 
   if (!walletInfo) return null;
 
+  if (compact) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        padding: '10px 15px',
+        marginBottom: '15px',
+        backgroundColor: colors.background,
+        borderRadius: '8px',
+        border: `1px solid ${colors.monero.primary}`,
+      }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold', color: colors.monero.primary }}>
+            HashShield Wallet
+          </div>
+          <div style={{ 
+            fontSize: '12px', 
+            color: colors.text, 
+            opacity: 0.8,
+            display: 'flex',
+            alignItems: 'center' 
+          }}>
+            <span style={{ 
+              display: 'inline-block', 
+              width: '8px', 
+              height: '8px', 
+              backgroundColor: '#28a745', 
+              borderRadius: '50%',
+              marginRight: '5px' 
+            }}></span>
+            {walletInfo.currentSessionAddress?.substring(0, 6)}...{walletInfo.currentSessionAddress?.substring(38)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '12px', color: colors.text, textAlign: 'right' }}>
+            Balance
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold', color: colors.monero.primary }}>
+            {masterBalance} ETH
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card>
-      <h3 style={{ margin: '0 0 15px 0', color: '#333' }}>
-        Hashield Wallet
+      <h3 style={{ margin: '0 0 15px 0', color: colors.text }}>
+        HashShield Wallet
       </h3>
       
       {walletInfo.currentSessionAddress && (
