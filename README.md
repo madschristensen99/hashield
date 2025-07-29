@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="extension/public/iconHashield.jpg" alt="Hashield Logo" width="200"/>
+  <img src="extension/public/iconHashield.jpg" alt="Hashield Logo"/>
 </div>
 
 # 🛡️ Hashield: Private web3 browsing built on Monero-Ethereum atomic swaps
