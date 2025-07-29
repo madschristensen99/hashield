@@ -28,11 +28,12 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 ## 🧱 Technical Components
 
 ### Smart Contracts (EVM)
-- `SwapCreatorAdapter`: Adapter contract connecting with 1inch cross-chain swap interfaces
+- `XMREscrowSrc`: Source escrow adapter contract connecting with 1inch cross-chain swap interfaces
+- `XMREscrowDst`: Destination escrow adapter contract for cross-chain swaps
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
 - **Deployed on Base Sepolia**:
   - SwapCreator: [0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a](https://sepolia.basescan.org/address/0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a)
-  - SwapCreatorAdapter: [0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3](https://sepolia.basescan.org/address/0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3)
+  - XMREscrowSrc: [0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3](https://sepolia.basescan.org/address/0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
@@ -78,15 +79,15 @@ cd ..
 forge build
 
 # Compile specific contracts (recommended approach)
-forge build --contracts contracts/SwapCreatorAdapter.sol --skip cross-chain-swap
+forge build --contracts contracts/XMREscrowSrc.sol --skip cross-chain-swap
 
 # Compile with IR pipeline to resolve stack too deep errors
-forge build --contracts contracts/SwapCreatorAdapter.sol --skip cross-chain-swap --via-ir
+forge build --contracts contracts/XMREscrowSrc.sol --skip cross-chain-swap --via-ir
 ```
 
 > **Note**: Due to dependency issues in the cross-chain-swap submodule, you should use the `--skip cross-chain-swap` flag when compiling or deploying contracts. This skips the problematic dependencies while still correctly compiling our contracts.
 
-> **Important**: The SwapCreatorAdapter contract requires the `--via-ir` flag for compilation due to its complexity. The IR-based compiler pipeline helps resolve "Stack too deep" errors by using a more sophisticated intermediate representation and better register allocation.
+> **Important**: The XMREscrowSrc and XMREscrowDst contracts require the `--via-ir` flag for compilation due to their complexity. The IR-based compiler pipeline helps resolve "Stack too deep" errors by using a more sophisticated intermediate representation and better register allocation.
 
 ### Testing
 ```bash
@@ -103,10 +104,10 @@ forge test -vvv
 ./deploy-direct.sh
 
 # Manual deployment with the --skip flag
-forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter --skip cross-chain-swap --via-ir --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
+forge create contracts/XMREscrowSrc.sol:XMREscrowSrc --skip cross-chain-swap --via-ir --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
 ```
 
-> **Note**: The `--via-ir` flag is required when deploying the SwapCreatorAdapter contract to use Solidity's IR-based compiler pipeline, which resolves stack too deep errors.
+> **Note**: The `--via-ir` flag is required when deploying the XMREscrowSrc and XMREscrowDst contracts to use Solidity's IR-based compiler pipeline, which resolves stack too deep errors.
 
 ## 🔐 Cryptographic Flow
 
@@ -133,7 +134,8 @@ forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter --skip cross-ch
 ```
 hashield/
 ├── contracts/                  # Smart contracts
-│   ├── SwapCreatorAdapter.sol  # Adapter for 1inch interfaces
+│   ├── XMREscrowSrc.sol       # Source escrow adapter for 1inch interfaces
+│   ├── XMREscrowDst.sol       # Destination escrow adapter for 1inch interfaces
 │   ├── atomic-swap/            # Symbolic link to xmr-eth-atomic-swaps/ethereum
 │   └── cross-chain-swap/       # 1inch cross-chain-swap submodule
 ├── lib/                        # External libraries

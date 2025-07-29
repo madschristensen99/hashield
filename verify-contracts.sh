@@ -28,14 +28,14 @@ forge verify-contract \
     contracts/atomic-swap/ethereum/contracts/SwapCreator.sol:SwapCreator \
     --etherscan-api-key $ETHERSCAN_API_KEY
 
-echo "Verifying SwapCreatorAdapter contract at $SWAP_CREATOR_ADAPTER_ADDRESS..."
+echo "Verifying XMREscrowSrc contract at $SWAP_CREATOR_ADAPTER_ADDRESS..."
 forge verify-contract \
     --chain-id 84532 \
     --watch \
     --compiler-version "v0.8.28" \
     --constructor-args $(cast abi-encode "constructor(address)" $SWAP_CREATOR_ADDRESS) \
     $SWAP_CREATOR_ADAPTER_ADDRESS \
-    contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
+    contracts/XMREscrowSrc.sol:XMREscrowSrc \
     --etherscan-api-key $ETHERSCAN_API_KEY
 
 echo "Verification process completed!"

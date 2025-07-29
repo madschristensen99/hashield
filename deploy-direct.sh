@@ -53,8 +53,8 @@ if [ "$VERIFY" = "true" ]; then
     echo "Verification submitted. Check BaseScan for status."
 fi
 
-echo "Deploying SwapCreatorAdapter..."
-ADAPTER_ADDRESS=$(forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
+echo "Deploying XMREscrowSrc..."
+ADAPTER_ADDRESS=$(forge create contracts/XMREscrowSrc.sol:XMREscrowSrc \
   --rpc-url base_sepolia \
   --private-key $PRIVATE_KEY \
   --legacy \
@@ -65,15 +65,15 @@ ADAPTER_ADDRESS=$(forge create contracts/SwapCreatorAdapter.sol:SwapCreatorAdapt
   | grep "Deployed to" | awk '{print $3}')
 
 if [ -z "$ADAPTER_ADDRESS" ]; then
-    echo "Error: Failed to deploy SwapCreatorAdapter."
+    echo "Error: Failed to deploy XMREscrowSrc."
     exit 1
 fi
 
-echo "SwapCreatorAdapter deployed at: $ADAPTER_ADDRESS"
+echo "XMREscrowSrc deployed at: $ADAPTER_ADDRESS"
 
-# Verify SwapCreatorAdapter if API key is available
+# Verify XMREscrowSrc if API key is available
 if [ "$VERIFY" = "true" ]; then
-    echo "Verifying SwapCreatorAdapter contract..."
+    echo "Verifying XMREscrowSrc contract..."
     forge verify-contract \
       --chain-id 84532 \
       --watch \
@@ -82,7 +82,7 @@ if [ "$VERIFY" = "true" ]; then
       --constructor-args $(cast abi-encode "constructor(address)" $SWAP_CREATOR_ADDRESS) \
       --via-ir \
       $ADAPTER_ADDRESS \
-      contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
+      contracts/XMREscrowSrc.sol:XMREscrowSrc \
       --etherscan-api-key $ETHERSCAN_API_KEY
     
     echo "Verification submitted. Check BaseScan for status."
@@ -90,5 +90,5 @@ fi
 
 echo "Deployment completed!"
 echo "SwapCreator: $SWAP_CREATOR_ADDRESS"
-echo "SwapCreatorAdapter: $ADAPTER_ADDRESS"
+echo "XMREscrowSrc: $ADAPTER_ADDRESS"
 echo "View on BaseScan: https://sepolia.basescan.org/address/$ADAPTER_ADDRESS"
