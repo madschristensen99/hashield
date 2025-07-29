@@ -18,6 +18,7 @@ fi
 echo "Deploying SwapCreator..."
 SWAP_CREATOR_ADDRESS=$(forge create --rpc-url base_sepolia \
   --private-key $PRIVATE_KEY \
+  --legacy \
   --broadcast \
   contracts/atomic-swap/ethereum/contracts/SwapCreator.sol:SwapCreator \
   | grep "Deployed to" | awk '{print $3}')
@@ -32,6 +33,7 @@ echo "SwapCreator deployed at: $SWAP_CREATOR_ADDRESS"
 echo "Deploying SwapCreatorAdapter..."
 forge create --rpc-url base_sepolia \
   --private-key $PRIVATE_KEY \
+  --legacy \
   --broadcast \
   contracts/SwapCreatorAdapter.sol:SwapCreatorAdapter \
   --constructor-args $SWAP_CREATOR_ADDRESS

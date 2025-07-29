@@ -24,7 +24,9 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 ### Smart Contracts (EVM)
 - `SwapCreatorAdapter`: Adapter contract connecting with 1inch cross-chain swap interfaces
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
-- **Deployed on Base Sepolia**: Check deployment files for latest addresses
+- **Deployed on Base Sepolia**:
+  - SwapCreator: [0xE7c61B836c76DCA60FF45431FF4a555fcda6514f](https://sepolia.basescan.org/address/0xe7c61b836c76dca60ff45431ff4a555fcda6514f)
+  - SwapCreatorAdapter: [0x1dF56ffB766cA061c0cC73410b94989429B47acb](https://sepolia.basescan.org/address/0x1df56ffb766ca061c0cc73410b94989429b47acb)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
