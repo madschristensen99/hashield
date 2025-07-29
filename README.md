@@ -38,6 +38,7 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 - **Deployed on Base Sepolia**:
   - SwapCreator: [0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a](https://sepolia.basescan.org/address/0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a)
   - XMREscrowSrc: [0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3](https://sepolia.basescan.org/address/0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3)
+  - LimitOrderProtocol: [0xE53136D9De56672e8D2665C98653AC7b8A60Dc44](https://sepolia.basescan.org/address/0xE53136D9De56672e8D2665C98653AC7b8A60Dc44)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
