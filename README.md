@@ -31,8 +31,8 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 - `SwapCreatorAdapter`: Adapter contract connecting with 1inch cross-chain swap interfaces
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
 - **Deployed on Base Sepolia**:
-  - SwapCreator: [0xE7c61B836c76DCA60FF45431FF4a555fcda6514f](https://sepolia.basescan.org/address/0xe7c61b836c76dca60ff45431ff4a555fcda6514f)
-  - SwapCreatorAdapter: [0x1dF56ffB766cA061c0cC73410b94989429B47acb](https://sepolia.basescan.org/address/0x1df56ffb766ca061c0cc73410b94989429b47acb)
+  - SwapCreator: [0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a](https://sepolia.basescan.org/address/0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a)
+  - SwapCreatorAdapter: [0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3](https://sepolia.basescan.org/address/0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
