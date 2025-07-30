@@ -1,182 +1,136 @@
-# Hashield 1inch Microservice
+# HashShield 1Inch Microservice
 
-## Overview
+A microservice that bridges the HashShield Monero-Ethereum atomic swap protocol with the 1inch Limit Order Protocol. This service acts as a relayer for cross-chain transactions between Monero and EVM chains.
 
-This microservice is the central coordination hub for Hashield's cross-chain operations, integrating the Monero-ETH atomic swap protocol with the 1inch Limit Order Protocol. It orchestrates all services required for seamless cross-chain transactions, including order management, relaying, and direct communication with the Monero-ETH swap daemon.
+## Features
+
+- Order creation and management with the 1inch Limit Order Protocol
+- Integration with the Monero-ETH atomic swap daemon
+- Relayer functionality for deploying escrows and executing swaps
+- RESTful API for order management, swap control, and relayer operations
 
 ## Architecture
 
-### Core Components
+The microservice is structured into three main components:
 
-1. **Monero-ETH Swap Daemon Integration**
-   - Direct communication with the atomic-swap daemon
-   - Management of swap states and lifecycle
-   - Handling of Monero cryptographic operations
-   - Coordination of on-chain ETH transactions with off-chain XMR transactions
+1. **Order Manager**: Handles interactions with the 1inch order book
+   - Create and manage limit orders
+   - Fetch active orders and quotes
+   - Generate secrets and hash locks for atomic swaps
 
-2. **Order Management**
-   - Create and sign limit orders
-   - Post orders to the off-chain order book
-   - Track order status and history
+2. **Swap Daemon Interface**: Communicates with the Monero-ETH atomic swap daemon
+   - Create and manage swaps
+   - Set swap status (ready, claim, refund)
+   - Monitor swap status
 
-3. **Relayer Service**
-   - Monitor the order book for fillable orders
-   - Execute orders when conditions are met
-   - Trigger swap daemon operations
+3. **Relayer**: Handles blockchain transactions
+   - Deploy source and destination escrows
+   - Execute withdrawals and cancellations
+   - Submit transactions to the Resolver contract
 
-4. **XMR-ETH Bridge**
-   - Interface with Monero nodes
-   - Coordinate with SwapCreator contract
-   - Ensure atomic execution across chains
+## Prerequisites
 
-5. **API Layer**
-   - Endpoints for order creation
-   - Status checking and history
-   - Webhook notifications
-   - Swap daemon control interface
+- Node.js 14+ and npm
+- Access to Base Sepolia RPC endpoint
+- 1inch API key
+- Monero-ETH atomic swap daemon running
+- Private key for relayer account with ETH for gas
 
-### Technical Flow
+## Setup
 
-```
-User/Extension → Create Order → Order Book
-                                    ↓
-                               Relayer Service
-                                    ↓
-                             Swap Daemon Controller
-                               ↙           ↘
-                      EVM Chain         Monero Chain
-                      (LimitOrderProtocol)  (XMR Node)
-                               ↘           ↙
-                             Atomic Swap Result
+1. Clone the repository:
+```bash
+git clone https://github.com/madschristensen99/hashield.git
+cd hashield/1InchMicroservice
 ```
 
-## Integration Points
+2. Install dependencies:
+```bash
+npm install
+```
 
-### Smart Contracts
-- **LimitOrderProtocol**: `0xE53136D9De56672e8D2665C98653AC7b8A60Dc44` (Base Sepolia)
-- **SwapCreator**: `0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a` (Base Sepolia)
-- **XMREscrowSrc**: `0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3` (Base Sepolia)
+3. Create a `.env` file based on the `.env.example` template:
+```bash
+cp .env.example .env
+```
 
-### Monero-ETH Swap Daemon
-- **Communication Protocol**: gRPC/REST API
-- **Daemon Location**: Runs as a companion service
-- **Key Functions**:
-  - XMR transaction creation and signing
-  - Secret key management
-  - Cryptographic proof generation
-  - Cross-chain state monitoring
+4. Fill in the required environment variables in the `.env` file:
+```
+# Server configuration
+SERVER_HOST=localhost
+SERVER_PORT=3000
 
-### External Services
-- 1inch API for order book interaction
-- Monero RPC for XMR transactions
-- Base Sepolia RPC for EVM transactions
+# 1inch API configuration
+ONEINCH_API_URL=https://fusion.1inch.io
+ONEINCH_API_KEY=your_api_key_here
 
-## Implementation Roadmap
+# Blockchain configuration
+BLOCKCHAIN_RPC_URL=https://sepolia.base.org
+BLOCKCHAIN_PRIVATE_KEY=your_private_key_here
 
-### Phase 1: Core Infrastructure
-- Set up project structure
-- Implement 1inch Cross-Chain SDK integration
-- Create basic API endpoints
+# Swap daemon configuration
+SWAP_DAEMON_RPC_URL=http://localhost:8080
+SWAP_DAEMON_USERNAME=username
+SWAP_DAEMON_PASSWORD=password
 
-### Phase 2: Swap Daemon Integration
-- Develop communication layer with atomic-swap daemon
-- Implement daemon control interfaces
-- Create state synchronization mechanisms
-- Build error handling and recovery protocols
+# Relayer configuration
+RELAYER_FEE=0.001
+RELAYER_ADDRESS=0xYourRelayerAddress
+```
 
-### Phase 3: Order Management
-- Implement order creation and signing
-- Develop order book interaction
-- Build order tracking system
+5. Build the TypeScript code:
+```bash
+npm run build
+```
 
-### Phase 4: Relayer Functionality
-- Develop order monitoring system
-- Implement matching algorithm
-- Create execution engine
-- Connect relayer to swap daemon triggers
-
-### Phase 5: XMR-ETH Bridge
-- Integrate with Monero RPC
-- Implement atomic swap coordination
-- Develop recovery mechanisms
-- Build cross-chain transaction monitoring
-
-### Phase 6: Testing & Deployment
-- Unit and integration testing
-- End-to-end swap testing
-- Security audit
-- Production deployment
+6. Start the service:
+```bash
+npm start
+```
 
 ## API Endpoints
 
 ### Order Management
-- `POST /api/orders` - Create and post a new order
-- `GET /api/orders` - List all orders
-- `GET /api/orders/:id` - Get order details
-- `DELETE /api/orders/:id` - Cancel an order
 
-### Swap Daemon Control
-- `POST /api/swaps` - Initiate a new atomic swap
-- `GET /api/swaps` - List all active swaps
-- `GET /api/swaps/:id` - Get swap details and status
-- `POST /api/swaps/:id/cancel` - Attempt to cancel a swap
-- `GET /api/swaps/:id/proof` - Get cryptographic proofs for a swap
+- `GET /api/orders` - Get active orders
+- `GET /api/orders/maker/:address` - Get orders by maker address
+- `GET /api/orders/:orderId` - Get order by ID
+- `POST /api/orders` - Create a new order
+- `PATCH /api/orders/:orderId` - Update order status
 
-### Status & Monitoring
-- `GET /api/status` - Get service status
-- `GET /api/metrics` - Get performance metrics
-- `POST /api/webhooks` - Register webhook for notifications
+### Swap Daemon
 
-## Configuration
+- `GET /api/swaps/status` - Get swap daemon status
+- `GET /api/swaps` - Get all swaps
+- `GET /api/swaps/:swapId` - Get swap by ID
+- `POST /api/swaps` - Create a new swap
+- `POST /api/swaps/:swapId/ready` - Set swap as ready
+- `POST /api/swaps/:swapId/claim` - Claim a swap
+- `POST /api/swaps/:swapId/refund` - Refund a swap
 
-The service requires the following environment variables:
+### Relayer
 
-```
-# Network Configuration
-BASE_SEPOLIA_RPC_URL=
-MONERO_RPC_URL=
+- `POST /api/relayer/escrow` - Create an escrow
+- `POST /api/relayer/withdraw` - Withdraw with relayer
+- `POST /api/relayer/deploy/src` - Deploy source escrow
+- `POST /api/relayer/deploy/dst` - Deploy destination escrow
+- `POST /api/relayer/withdraw/escrow` - Withdraw from escrow
+- `POST /api/relayer/cancel/escrow` - Cancel escrow
 
-# Contract Addresses
-LIMIT_ORDER_PROTOCOL_ADDRESS=0xE53136D9De56672e8D2665C98653AC7b8A60Dc44
-SWAP_CREATOR_ADDRESS=0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a
-XMR_ESCROW_SRC_ADDRESS=0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3
+## Smart Contract Addresses (Base Sepolia)
 
-# Swap Daemon Configuration
-SWAP_DAEMON_HOST=localhost
-SWAP_DAEMON_PORT=5000
-SWAP_DAEMON_API_KEY=
-SWAP_DAEMON_SSL_ENABLED=false
+- LimitOrderProtocol: `0xE53136D9De56672e8D2665C98653AC7b8A60Dc44`
+- SwapCreator: `0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a`
+- XMREscrowSrc: `0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3`
 
-# API Keys
-INCH_API_KEY=
+## Development
 
-# Security
-PRIVATE_KEY=
-```
-
-## Development Setup
+To run in development mode with hot reloading:
 
 ```bash
-# Install dependencies
-npm install
-
-# Run in development mode
 npm run dev
-
-# Run tests
-npm test
 ```
 
-## Security Considerations
+## License
 
-- Private keys are stored securely and never exposed
-- All transactions are signed locally
-- Recovery mechanisms for interrupted swaps
-- Timeout handling for cross-chain operations
-
-## Future Enhancements
-
-- Support for additional EVM chains
-- Integration with more DEX aggregators
-- Enhanced privacy features
-- Mobile app integration
+MIT
