@@ -119,9 +119,11 @@ npm start
 
 ## Smart Contract Addresses (Base Sepolia)
 
-- LimitOrderProtocol: `0xE53136D9De56672e8D2665C98653AC7b8A60Dc44`
-- SwapCreator: `0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a`
-- XMREscrowSrc: `0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3`
+- LimitOrderProtocol: [`0xE53136D9De56672e8D2665C98653AC7b8A60Dc44`](https://sepolia.basescan.org/address/0xE53136D9De56672e8D2665C98653AC7b8A60Dc44)
+- SwapCreator: [`0x212072CB504Dc2fBF6477772B8E318D286B80e35`](https://sepolia.basescan.org/address/0x212072CB504Dc2fBF6477772B8E318D286B80e35)
+- XMREscrowSrc: [`0x8c39940feBc35F0A44868c3B3E138C58989944a1`](https://sepolia.basescan.org/address/0x8c39940feBc35F0A44868c3B3E138C58989944a1)
+- XMREscrowDst: [`0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea`](https://sepolia.basescan.org/address/0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea)
+- Resolver: [`0x569961856A3f66788D29e70aeaB7400f11895f4A`](https://sepolia.basescan.org/address/0x569961856A3f66788D29e70aeaB7400f11895f4A)
 
 ## Development
 

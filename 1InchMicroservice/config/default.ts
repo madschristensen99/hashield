@@ -18,8 +18,10 @@ export default {
       chainId: 84532,
       contracts: {
         limitOrderProtocol: '0xE53136D9De56672e8D2665C98653AC7b8A60Dc44',
-        swapCreator: '0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a',
-        xmrEscrowSrc: '0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3'
+        swapCreator: '0x212072CB504Dc2fBF6477772B8E318D286B80e35',
+        xmrEscrowSrc: '0x8c39940feBc35F0A44868c3B3E138C58989944a1',
+        xmrEscrowDst: '0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea',
+        resolver: '0x569961856A3f66788D29e70aeaB7400f11895f4A'
       }
     },
     privateKey: process.env.PRIVATE_KEY || ''
