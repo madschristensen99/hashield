@@ -36,9 +36,11 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 - `XMREscrowDst`: Destination escrow adapter contract for cross-chain swaps
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
 - **Deployed on Base Sepolia**:
-  - SwapCreator: [0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a](https://sepolia.basescan.org/address/0xA8Eec88fC1A0096D2571a2c47aC9bF7492BfF39a)
-  - XMREscrowSrc: [0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3](https://sepolia.basescan.org/address/0x3d3F34A0C3ee6940C50B50DBaa1b2150ca119Fb3)
-  - LimitOrderProtocol: [0xE53136D9De56672e8D2665C98653AC7b8A60Dc44](https://sepolia.basescan.org/address/0xE53136D9De56672e8D2665C98653AC7b8A60Dc44)
+  - SwapCreator: [`0x212072CB504Dc2fBF6477772B8E318D286B80e35`](https://sepolia.basescan.org/address/0x212072CB504Dc2fBF6477772B8E318D286B80e35)
+  - XMREscrowSrc: [`0x8c39940feBc35F0A44868c3B3E138C58989944a1`](https://sepolia.basescan.org/address/0x8c39940feBc35F0A44868c3B3E138C58989944a1)
+  - XMREscrowDst: [`0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea`](https://sepolia.basescan.org/address/0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea)
+  - Resolver: [`0x569961856A3f66788D29e70aeaB7400f11895f4A`](https://sepolia.basescan.org/address/0x569961856A3f66788D29e70aeaB7400f11895f4A)
+  - LimitOrderProtocol: [`0xE53136D9De56672e8D2665C98653AC7b8A60Dc44`](https://sepolia.basescan.org/address/0xE53136D9De56672e8D2665C98653AC7b8A60Dc44)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
@@ -104,10 +106,28 @@ forge test -vvv
 ```
 
 ### Deployment
-```bash
-# Deploy to Base Sepolia using the script
-./deploy-direct.sh
 
+The `deploy-direct.sh` script handles the deployment of all required contracts in the correct order and verifies them on BaseScan:
+
+```bash
+# Set up environment variables in .env file first
+# Required variables: PRIVATE_KEY, ETHERSCAN_API_KEY
+
+# Deploy all contracts to Base Sepolia using the script
+./deploy-direct.sh
+```
+
+The script will deploy the following contracts in sequence:
+1. SwapCreator
+2. XMREscrowSrc (with SwapCreator address as constructor argument)
+3. XMREscrowDst (with SwapCreator address as constructor argument)
+4. Resolver (with XMREscrowSrc, LimitOrderProtocol, and deployer addresses as constructor arguments)
+
+All contracts will be automatically verified on BaseScan (except for SwapCreator due to compiler version limitations).
+
+For manual deployment, you can use:
+
+```bash
 # Manual deployment with the --skip flag
 forge create contracts/XMREscrowSrc.sol:XMREscrowSrc --skip cross-chain-swap --via-ir --constructor-args <SWAP_CREATOR_ADDRESS> --private-key $PRIVATE_KEY --rpc-url $BASE_SEPOLIA_RPC_URL --legacy
 ```
