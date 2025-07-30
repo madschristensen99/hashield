@@ -7,11 +7,34 @@ import { ethers } from 'ethers';
 export class SwapController {
   async getStatus(req: Request, res: Response) {
     try {
+      // Use personal_balances for status check in the new API
       const status = await swapDaemonService.getStatus();
       return res.status(200).json({ success: true, data: status });
     } catch (error) {
       logger.error('Error retrieving swap daemon status', { error });
       return res.status(500).json({ success: false, error: 'Failed to retrieve swap daemon status' });
+    }
+  }
+  
+  async getNetworkAddresses(req: Request, res: Response) {
+    try {
+      const addresses = await swapDaemonService.getNetworkAddresses();
+      return res.status(200).json({ success: true, data: addresses });
+    } catch (error) {
+      logger.error('Error retrieving network addresses', { error });
+      return res.status(500).json({ success: false, error: 'Failed to retrieve network addresses' });
+    }
+  }
+  
+  async getExchangeRate(req: Request, res: Response) {
+    try {
+      // In a real implementation, this would fetch from an oracle or price feed
+      // For testing, we'll return a fixed exchange rate
+      const exchangeRate = "10.0"; // 1 XMR = 10 ETH
+      return res.status(200).json({ success: true, exchangeRate });
+    } catch (error) {
+      logger.error('Error retrieving exchange rate', { error });
+      return res.status(500).json({ success: false, error: 'Failed to retrieve exchange rate' });
     }
   }
 
