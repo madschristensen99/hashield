@@ -2,7 +2,7 @@
 
 **Privacy-by-default Web3 Browser Extension with Monero Integration**
 
-Hashield is a browser extension that enables Web3 interactions with privacy by default. It provides fresh addresses for each transaction while ensuring funds come from private and provably non-malicious onchain sources through PrivacyPools integration. Additionally, Hashield features Monero wallet integration for enhanced privacy.
+Hashield is a browser extension that enables Web3 interactions with privacy by default. It provides fresh addresses for each transaction while ensuring privacy and security. Additionally, Hashield features Monero wallet integration for enhanced privacy.
 
 ## Features
 
@@ -11,14 +11,12 @@ Hashield is a browser extension that enables Web3 interactions with privacy by d
 - **Address spoofing**: Optional feature to spoof fake rich addresses to dApps for enhanced functionality
 
 ### 💰 Private Fund Management
-- **PrivacyPools integration**: Funds sourced from private and provably non-malicious onchain pools
-- **Pool contract withdrawals**: Secure funding mechanism using smart contracts instead of direct transfers
-- **Automatic funding**: Session wallets are automatically funded as needed for transactions
+- **Privacy-focused**: Secure management of funds with privacy in mind
+- **Automatic funding**: Session wallets can be automatically funded as needed for transactions
 
 ### 🌐 Cross-Chain Compatibility
-- **Ethereum L1 native**: Fund transactions on other chains from L1's PrivacyPools.
-- **CCIP integration**: Cross-chain transactions through Chainlink's Cross-Chain Interoperability Protocol
-- **Multi-chain payments**: Send USDC and other tokens across supported networks
+- **Ethereum support**: Native support for Ethereum transactions
+- **Multi-chain potential**: Architecture designed for future multi-chain support
 
 ### 🔒 Monero Integration
 - **Deterministic Monero wallet**: Generate a Monero wallet deterministically from your Ethereum seed phrase
@@ -34,14 +32,14 @@ just built in.
 ### Prerequisites
 - Chrome or Chromium-based browser
 - Node.js (v16 or higher)
-- A 12-word seed phrase with testnet funds (for demo, see end of README I gotcha ;) ). 
+- A 12-word seed phrase with testnet funds
 
 ### Installation Steps
 
 #### Option 1: Direct Installation (Recommended)
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/madschristensen99/hashield.git
    cd hashield/extension
    ```
 
@@ -54,7 +52,7 @@ just built in.
 #### Option 2: Build from Source
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/madschristensen99/hashield.git
    cd hashield/extension
    ```
 
@@ -77,7 +75,6 @@ just built in.
 5. **Setup your wallet**
    - Click the Hashield extension icon
    - Enter your 12-word seed phrase
-   - Accept the deposit suggestion to fund your pool contract
    - You're ready to use Web3 with privacy!
 
 ### Usage
@@ -86,29 +83,12 @@ just built in.
 - Approve transactions through the extension popup
 - Monitor transaction progress in real-time
 
-## Tradeoffs and Caveats
+## Security Considerations
 
-### ⚠️ Demo Limitations
-
-**PrivacyPools Integration**: Due to a failure of the testnet site and ASP (Anonymous Set Provider) of PrivacyPools over the weekend, this demo falls back to a mocked Pool contract instead of the full PrivacyPools protocol. The privacy guarantees are demonstrated conceptually but not cryptographically enforced.
-
-**CCIP Token Availability**: While the cross-chain payment code is fully functional, Ethereum Sepolia's whitelisted tokens (USDC, CCIP-BnM) cannot be easily acquired through normal swaps or faucets, making cross-chain demo transactions challenging to execute. They remain possible if you fund the addresses with those tokens.
-
-### 🔒 Security Considerations
 - **Testnet only**: This is a proof of concept for testnet demonstration. DO NOT USE WITH YOUR REAL SEED PHRASE.
 - **Seed phrase security**: Store your seed phrase securely; it controls all derived addresses
-- **Costs**: Each transaction requires funding from the pool, incurring gas costs. PrivacyPools takes a 0.05% commission on withdrawals, and 0.5% on deposits.
+- **Deterministic addresses**: Both Ethereum and Monero addresses are derived from the same seed phrase
 
 ---
 
-**Built for ETHGlobal Cannes 2025** 
-
-This project demonstrates privacy-preserving Web3 interactions through fresh address generation and private fund sourcing, showcasing the potential for mainstream privacy adoption in blockchain applications.
-
-
-## A Little Demo Gift
-
-Here is a little seed gift for your to try out the product easily.
-
-![Demo Seed Phrase](image.png)
-
+Hashield demonstrates privacy-preserving Web3 interactions through fresh address generation and Monero integration, showcasing the potential for mainstream privacy adoption in blockchain applications.
