@@ -84,6 +84,12 @@ const initializeMasterWallet = async () => {
 const initializeMoneroWallet = async (seedPhrase: string) => {
   try {
     console.log('Initializing Monero wallet...');
+    console.log('Seed phrase available:', !!seedPhrase);
+    
+    if (!seedPhrase) {
+      console.error('Cannot initialize Monero wallet: seed phrase is empty');
+      return false;
+    }
     
     // Initialize the Monero wallet with the same seed phrase
     const success = await moneroWalletManager.initializeWallet({
@@ -97,6 +103,17 @@ const initializeMoneroWallet = async (seedPhrase: string) => {
     if (success) {
       moneroWalletInitialized = true;
       console.log('Monero wallet initialized successfully');
+      
+      // Verify we can get the primary address
+      try {
+        const address = await moneroWalletManager.getPrimaryAddress();
+        console.log('Monero primary address verified:', address);
+        if (!address) {
+          console.error('Monero wallet initialization issue: address is empty');
+        }
+      } catch (addressError) {
+        console.error('Failed to verify Monero address:', addressError);
+      }
       
       // Start syncing the wallet
       await moneroWalletManager.startSyncing(30000); // Sync every 30 seconds

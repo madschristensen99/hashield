@@ -31,16 +31,25 @@ export class MoneroWalletManager {
     password: string;
     networkType: number;
     seed?: string;
-    primaryAddress: string;
+    primaryAddress?: string;
     balance: bigint;
     unlockedBalance: bigint;
   }): any {
+    // Generate a deterministic address if seed is provided, otherwise use the provided address or generate a random one
+    const seed = config.seed || this.generateMockSeed();
+    const primaryAddress = config.primaryAddress || this.generateMockAddress(seed);
+    
+    // Debug logging
+    console.log('Creating mock Monero wallet with:');
+    console.log('- Seed available:', !!seed);
+    console.log('- Primary address:', primaryAddress);
+    
     return {
       path: config.path,
       password: config.password,
       networkType: config.networkType,
-      seed: config.seed || this.generateMockSeed(),
-      primaryAddress: config.primaryAddress,
+      seed: seed,
+      primaryAddress: primaryAddress,
       balance: config.balance,
       unlockedBalance: config.unlockedBalance,
       isConnected: true,
@@ -57,7 +66,10 @@ export class MoneroWalletManager {
       },
       startSyncing: async () => true,
       stopSyncing: async () => true,
-      getPrimaryAddress: async () => config.primaryAddress,
+      getPrimaryAddress: async () => {
+        console.log('Mock wallet: getPrimaryAddress called, returning:', primaryAddress);
+        return primaryAddress;
+      },
       getSeed: async () => config.seed || '',
       getBalance: async () => config.balance,
       getUnlockedBalance: async () => config.unlockedBalance,
@@ -86,16 +98,43 @@ export class MoneroWalletManager {
     return seed;
   }
 
-  private generateMockAddress(): string {
-    // Generate a random Monero-like address
+  private generateMockAddress(seedPhrase?: string): string {
+    // Generate a deterministic Monero-like address based on ETH seed phrase
     const prefix = this.networkType === MoneroNetworkType.MAINNET ? '4' : 
                   this.networkType === MoneroNetworkType.TESTNET ? '9' : '5';
     let address = prefix;
-    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    for (let i = 0; i < 95; i++) {
-      address += chars.charAt(Math.floor(Math.random() * chars.length));
+    
+    // If seed phrase is provided, use it to generate a deterministic address
+    if (seedPhrase) {
+      // Simple deterministic algorithm: use the seed phrase to generate a consistent hash
+      const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      
+      // Create a simple hash from the seed phrase
+      let hash = 0;
+      for (let i = 0; i < seedPhrase.length; i++) {
+        hash = ((hash << 5) - hash) + seedPhrase.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      
+      // Use the hash to deterministically generate the address
+      const seedArray = seedPhrase.split(' ');
+      for (let i = 0; i < 95; i++) {
+        // Use different parts of the seed phrase based on position
+        const wordIndex = i % seedArray.length;
+        const word = seedArray[wordIndex];
+        const charIndex = (hash + i + word.charCodeAt(i % word.length)) % chars.length;
+        address += chars.charAt(Math.abs(charIndex));
+      }
+      
+      return address;
+    } else {
+      // Fallback to random address if no seed phrase is provided
+      const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      for (let i = 0; i < 95; i++) {
+        address += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return address;
     }
-    return address;
   }
 
   private generateRandomTxHash(): string {
@@ -156,29 +195,30 @@ export class MoneroWalletManager {
       
       // Create mock wallet in browser environment
       if (config.seedPhrase) {
-        // Create wallet from seed
+        // Create wallet from seed - primaryAddress will be deterministically generated from the seed
         this.wallet = this.createMockWallet({
           path: config.path,
           password: config.password,
           networkType: this.networkType,
           seed: config.seedPhrase,
-          primaryAddress: this.generateMockAddress(),
+          // Don't specify primaryAddress so it will be deterministically generated from seed
           balance: BigInt(0),
           unlockedBalance: BigInt(0)
         });
-        console.log('Monero wallet created from seed (mock)');
+        console.log('Monero wallet created from seed (mock) with deterministic address');
       } else {
         // Create new wallet
+        const newSeed = this.generateMockSeed();
         this.wallet = this.createMockWallet({
           path: config.path,
           password: config.password,
           networkType: this.networkType,
-          seed: this.generateMockSeed(),
-          primaryAddress: this.generateMockAddress(),
+          seed: newSeed,
+          // Don't specify primaryAddress so it will be deterministically generated from seed
           balance: BigInt(0),
           unlockedBalance: BigInt(0)
         });
-        console.log('New Monero wallet created (mock)');
+        console.log('New Monero wallet created (mock) with deterministic address');
       }
       
       this.isInitialized = true;
@@ -286,9 +326,23 @@ export class MoneroWalletManager {
     }
     
     try {
-      return await this.wallet.getPrimaryAddress();
+      const address = await this.wallet.getPrimaryAddress();
+      console.log('Retrieved Monero primary address:', address);
+      
+      // Ensure we're not returning an empty string or undefined
+      if (!address) {
+        console.warn('Primary address is empty, using wallet.primaryAddress directly');
+        return this.wallet.primaryAddress || 'Address generation failed';
+      }
+      
+      return address;
     } catch (error) {
       console.error('Error getting primary address:', error);
+      // Fallback to direct property access in case the method fails
+      if (this.wallet.primaryAddress) {
+        console.log('Falling back to direct primaryAddress property:', this.wallet.primaryAddress);
+        return this.wallet.primaryAddress;
+      }
       throw error;
     }
   }

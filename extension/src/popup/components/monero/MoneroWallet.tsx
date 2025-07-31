@@ -64,15 +64,25 @@ export const MoneroWallet: React.FC = () => {
   const loadMoneroAddress = async () => {
     setAddress(prev => ({ ...prev, loading: true, error: null }));
     try {
+      console.log('Requesting Monero address from background script...');
       const response = await chrome.runtime.sendMessage({ type: 'getMoneroAddress' });
-      if (response && !response.error) {
+      console.log('Received Monero address response:', response);
+      
+      if (response && !response.error && response.address) {
+        console.log('Setting valid Monero address:', response.address);
         setAddress({
           address: response.address,
           loading: false,
           error: null
         });
       } else {
-        throw new Error(response?.error || 'Failed to load Monero address');
+        console.error('Invalid Monero address response:', response);
+        // If address is empty string or undefined but no error was reported
+        if (response && !response.error && !response.address) {
+          throw new Error('Monero address is empty. Please try reinitializing the wallet.');
+        } else {
+          throw new Error(response?.error || 'Failed to load Monero address');
+        }
       }
     } catch (err: any) {
       console.error('Error loading Monero address:', err);

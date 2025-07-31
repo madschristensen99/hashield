@@ -4,16 +4,19 @@ import { colors } from '../../styles/theme';
 export const Header: React.FC = () => {
   return (
     <>
-      <h2 style={{ 
-        margin: '0 0 20px 0', 
-        color: '#FFFFFF', 
-        textAlign: 'center', 
-        fontFamily: "'Roboto', 'Arial', sans-serif", 
-        fontWeight: 'bold', 
-        textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' 
-      }}>
-        <span style={{ color: colors.monero.primary }}>Hash</span>ield
-      </h2>
+      {/* Added padding at the top */}
+      <div style={{ paddingTop: '16px' }}>
+        <h2 style={{ 
+          margin: '0 0 20px 0', 
+          color: '#FFFFFF', 
+          textAlign: 'center', 
+          fontFamily: "'Roboto', 'Arial', sans-serif", 
+          fontWeight: 'bold', 
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' 
+        }}>
+          <span style={{ color: colors.monero.primary }}>Hash</span>ield
+        </h2>
+      </div>
       
       {/* Monero-themed header accent */}
       <div style={{
