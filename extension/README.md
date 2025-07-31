@@ -1,8 +1,8 @@
-# PrivacyLinks
+# Hashield
 
-**Privacy-by-default Web3 Browser Extension**
+**Privacy-by-default Web3 Browser Extension with Monero Integration**
 
-PrivacyLinks is a browser extension that enables Web3 interactions with privacy by default. It provides fresh addresses for each transaction while ensuring funds come from private and provably non-malicious onchain sources through PrivacyPools integration.
+Hashield is a browser extension that enables Web3 interactions with privacy by default. It provides fresh addresses for each transaction while ensuring funds come from private and provably non-malicious onchain sources through PrivacyPools integration. Additionally, Hashield features Monero wallet integration for enhanced privacy.
 
 ## Features
 
@@ -19,6 +19,11 @@ PrivacyLinks is a browser extension that enables Web3 interactions with privacy 
 - **Ethereum L1 native**: Fund transactions on other chains from L1's PrivacyPools.
 - **CCIP integration**: Cross-chain transactions through Chainlink's Cross-Chain Interoperability Protocol
 - **Multi-chain payments**: Send USDC and other tokens across supported networks
+
+### 🔒 Monero Integration
+- **Deterministic Monero wallet**: Generate a Monero wallet deterministically from your Ethereum seed phrase
+- **Monero transactions**: Send and receive XMR with enhanced privacy
+- **Subaddress support**: Create and manage Monero subaddresses
 
 ### 🎯 User Experience
 The extension requires no effort to the users. Privacy is not something they have to learn how to do, it's
@@ -37,7 +42,7 @@ just built in.
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd PrivatePay
+   cd hashield/extension
    ```
 
 2. **Load in Chrome**
@@ -50,7 +55,7 @@ just built in.
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd PrivatePay
+   cd hashield/extension
    ```
 
 2. **Install dependencies**
@@ -70,14 +75,14 @@ just built in.
    - Select the `dist/` folder from the project directory
 
 5. **Setup your wallet**
-   - Click the PrivatePay extension icon
+   - Click the Hashield extension icon
    - Enter your 12-word seed phrase
    - Accept the deposit suggestion to fund your pool contract
    - You're ready to use Web3 with privacy!
 
 ### Usage
 - Navigate to any Web3 dApp (Uniswap works well)
-- Connect your wallet (PrivatePay will provide a fresh address, and spoof a rich user (can be turned off))
+- Connect your wallet (Hashield will provide a fresh address, and spoof a rich user (can be turned off))
 - Approve transactions through the extension popup
 - Monitor transaction progress in real-time
 
