@@ -1,9 +1,9 @@
 [submodule "contracts/atomic-swap"]
 	path = contracts/atomic-swap
 	url = https://github.com/AthanorLabs/atomic-swap.git
-[submodule "contracts/cross-chain-swap"]
-	path = contracts/cross-chain-swap
-	url = https://github.com/1inch/cross-chain-swap.git
+[submodule "contracts/limit-order-protocol"]
+	path = contracts/limit-order-protocol
+	url = https://github.com/1inch/limit-order-protocol.git
 [submodule "xmr-eth-atomic-swap"]
 	path = xmr-eth-atomic-swap
 	url = https://github.com/madschristensen99/xmr-eth-atomic-swap.git
