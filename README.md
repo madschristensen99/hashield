@@ -16,7 +16,7 @@ To make this project I smashed together three existing projects:
 
 - [Hashlocked](https://ethglobal.com/showcase/hashlocked-jwaq6) – Fusion + BTC<>EVM Swaps
 - [PrivacyLinks](https://ethglobal.com/showcase/privacylinks-y30gr) – Chromium web3 extension providing automatic address cycling
-- [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocolHashield is a privacy-by-default 
+- [ETH-XMR Atomic Swaps](https://github.com/AthanorLabs/atomic-swap) – open-source ETH ↔ XMR swap protocol
 
 The end result is a privacy-focused web3 wallet that enables secure, atomic swaps between EVM chains and Monero.
 
