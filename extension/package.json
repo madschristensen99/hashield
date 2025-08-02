@@ -1,0 +1,42 @@
+{
+  "name": "hashield-extension",
+  "version": "0.1.0",
+  "description": "Secure cross-chain transactions with Monero-Ethereum atomic swaps",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ethers": "^6.15.0",
+    "monero-ts": "^0.11.5",
+    "viem": "^2.20.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.329",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "assert": "^2.1.0",
+    "browserify-fs": "^1.0.0",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "esbuild": "^0.25.5",
+    "events": "^3.3.0",
+    "https-browserify": "^1.0.0",
+    "memfs": "^4.22.0",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "typescript": "^5.8.3",
+    "util": "^0.12.5"
+  }
+}
