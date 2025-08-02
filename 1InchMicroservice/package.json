@@ -1,35 +1,32 @@
 {
-  "name": "1inch-microservice",
+  "name": "1inchmicroservice",
   "version": "1.0.0",
-  "description": "Microservice for handling 1inch protocol integration with PrivateRPC",
-  "main": "dist/index.js",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "watch": "nodemon --exec ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "1inch",
-    "ethereum",
-    "swap",
-    "microservice"
-  ],
+  "keywords": [],
   "author": "",
   "license": "ISC",
+  "description": "",
   "dependencies": {
-    "@1inch/fusion-sdk": "^2.3.5",
+    "@1inch/cross-chain-sdk": "^0.1.15",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.1.0",
     "axios": "^1.11.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "ethers": "^6.15.0",
+    "ethers": "^5.7.2",
     "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
+    "typescript": "^5.8.3",
+    "uuid": "^11.1.0",
+    "web3": "^4.16.0",
+    "winston": "^3.17.0"
   }
 }
