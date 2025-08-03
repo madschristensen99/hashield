@@ -1297,6 +1297,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       
       // Atomic Swap message handlers
       if (msg.type === 'createAtomicSwapOrder') {
+        console.log('🔍 DEBUG: Running updated createAtomicSwapOrder handler');
         console.log('📦 Creating atomic swap order with params:', msg);
         
         // Check if we should force create even if wallets aren't initialized
@@ -1404,10 +1405,87 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             swapDaemonData = { error: 'Invalid JSON response from swap daemon' };
           }
           
+          // Call the fillOrder endpoint to post the order to the blockchain
+          let fillOrderData = null;
+          try {
+            // Extract order details from the response
+            const orderDetails = responseData?.data?.orderDetails;
+            if (orderDetails) {
+              console.log('🔄 Calling fillOrder endpoint with order hash:', orderDetails.orderHash);
+              
+              // Get the claim and refund secret hashes from the order data
+              const orderId = responseData?.data?.orderId;
+              const orderDetailsResponse = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              const orderDetailsData = await orderDetailsResponse.json();
+              console.log('📄 Order details for filling:', orderDetailsData);
+              
+              if (orderDetailsData?.success && orderDetailsData?.data) {
+                const orderData = orderDetailsData.data;
+                
+                // Call the fillOrder endpoint
+                const fillOrderResponse = await fetch('http://localhost:3000/api/orders/fill', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    function: 'fillOrder',
+                    params: {
+                      order: [
+                        '26207551322371976878585353221260688069607178536192576683038894547077949262514',
+                        '420372109872304513921779494997149469955536735806',
+                        '420372109872304513921779494997149469955536735806',
+                        '0',
+                        '0',
+                        '1000000000000000',
+                        '1000000000000000',
+                        '0'
+                      ],
+                      claimSecretHash: orderData.claimSecretHash,
+                      refundSecretHash: orderData.refundSecretHash,
+                      amount: '1000000000000000',
+                      unwrapWeth: 0
+                    }
+                  })
+                });
+                
+                fillOrderData = await fillOrderResponse.json();
+                console.log('⛓️ Fill order response:', fillOrderData);
+                
+                // If the order was successfully filled, update its status
+                if (fillOrderData?.success) {
+                  const updateStatusResponse = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      status: 'READY',
+                      swapId: swapDaemonData?.result?.id || ''
+                    })
+                  });
+                  
+                  const updateStatusData = await updateStatusResponse.json();
+                  console.log('🔄 Update order status response:', updateStatusData);
+                }
+              }
+            }
+          } catch (fillError) {
+            console.error('❌ Error filling order on chain:', fillError);
+            fillOrderData = { success: false, error: fillError instanceof Error ? fillError.message : 'Unknown error filling order' };
+          }
+          
           sendResponse({ 
             success: true, 
             orderData: responseData,
-            swapDaemonData: swapDaemonData
+            swapDaemonData: swapDaemonData,
+            fillOrderData: fillOrderData
           });
         } catch (error) {
           console.error('❌ Error creating atomic swap order:', error);
