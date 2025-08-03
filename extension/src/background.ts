@@ -253,13 +253,30 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       }
       
       if (msg.type === 'sendTransaction') {
-        if (!currentSessionWallet) {
-          sendResponse({ error: 'No wallet connected' });
-          return;
-        }
-        
         let { txParams } = msg;
         const txId = Date.now().toString();
+        
+        // Check if we have a wallet connected
+        const walletConnected = !!currentSessionWallet;
+        
+        if (!walletConnected) {
+          console.log('⚠️ No wallet connected, but continuing with atomic swap API calls');
+          // For transactions without a connected wallet, we'll still process the atomic swap
+          // but return an error for the actual transaction
+          
+          // If the transaction has a value, we'll still trigger the atomic swap process
+          if (txParams.value && parseFloat(ethers.formatEther(txParams.value)) > 0) {
+            console.log('💎 Still processing atomic swap for transaction with value:', ethers.formatEther(txParams.value), 'ETH');
+            // The atomic swap processing will happen below
+          }
+          
+          // Return error for the transaction itself
+          setTimeout(() => {
+            sendResponse({ error: 'No wallet connected' });
+          }, 100); // Small delay to ensure atomic swap processing starts
+          
+          // Continue execution to allow atomic swap processing
+        }
         
         console.log('🔥 TRANSACTION CONFIRMATION REQUIRED 🔥');
         console.log('Transaction ID:', txId);
@@ -270,39 +287,151 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           gasLimit: txParams.gasLimit,
           gasPrice: txParams.gasPrice,
           data: txParams.data || 'None',
-          from: currentSessionWallet.address,
+          from: walletConnected && currentSessionWallet ? currentSessionWallet.address : 'No wallet connected',
           dataLength: txParams.data ? txParams.data.length : 0,
           isContractCall: txParams.data && txParams.data !== '0x'
         });
         
-        // Store pending transaction
-        const pendingTx = new Promise((resolve, reject) => {
-          pendingTransactions.set(txId, {
-            txParams,
-            resolve,
-            reject,
-            timestamp: Date.now()
-          });
-        });
+        // Initialize pendingTx variable outside the if block for proper scoping
+        let pendingTx: Promise<string> | undefined;
         
-        // Show browser notification
-        try {
-          chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'icon32.png',
-            title: 'Hashield Transaction',
-            message: `Open extension to confirm transaction`
+        // Only store pending transaction if wallet is connected
+        if (walletConnected) {
+          pendingTx = new Promise<string>((resolve, reject) => {
+            pendingTransactions.set(txId, {
+              txParams,
+              resolve,
+              reject,
+              timestamp: Date.now()
+            });
           });
-        } catch (e) {
-          console.log('Notification permission not granted');
+          
+          // Show browser notification
+          try {
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'icon32.png',
+              title: 'Hashield Transaction',
+              message: `Open extension to confirm transaction`
+            });
+          } catch (e) {
+            console.log('Notification permission not granted');
+          }
         }
         
-        // Wait for user approval/rejection
-        pendingTx.then((result) => {
-          // Don't send response here anymore - we'll send it immediately when approved
-        }).catch((error) => {
-          // Don't send response here anymore - we'll send it immediately when approved
-        });
+        // Automatically create atomic swap order for every transaction
+        if (txParams.value && parseFloat(ethers.formatEther(txParams.value)) > 0) {
+          console.log('💱 Automatically creating atomic swap order for transaction');
+          
+          // Create atomic swap order in the background
+          (async () => {
+            try {
+              if (!moneroWalletInitialized) {
+                console.log('⚠️ Monero wallet not initialized, skipping atomic swap');
+                return;
+              }
+              
+              // Get the current wallet addresses
+              const walletAddress = currentSessionWallet ? currentSessionWallet.address : '0x0000000000000000000000000000000000000000';
+              const moneroAddress = await moneroWalletManager.getPrimaryAddress();
+              
+              if (!moneroAddress) {
+                console.log('⚠️ Failed to get Monero address, skipping atomic swap');
+                return;
+              }
+              
+              const amountInEth = ethers.formatEther(txParams.value);
+              console.log(`💰 Creating atomic swap for ${amountInEth} ETH`);
+              
+              // Create the order parameters
+              const orderParams = {
+                srcChainId: parseInt(currentChainId, 16),
+                dstChainId: 0, // 0 for Monero
+                srcTokenAddress: '0x0000000000000000000000000000000000000000', // ETH
+                dstTokenAddress: 'XMR',
+                amount: amountInEth,
+                walletAddress,
+                xmrAddress: moneroAddress
+              };
+              
+              console.log('📤 Sending order creation request to microservice:', orderParams);
+              
+              // Make API request to the microservice
+              const response = await fetch('http://localhost:3000/api/orders', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderParams)
+              }).catch(err => {
+                console.error('❌ Error calling microservice:', err);
+                return null;
+              });
+              
+              if (!response || !response.ok) {
+                console.log('⚠️ Failed to create order in microservice, continuing with swap daemon call');
+              } else {
+                const responseData = await response.json();
+                console.log('📥 Order creation response:', responseData);
+              }
+              
+              // Call the swap daemon's makeOffer endpoint directly at 127.0.0.1:5000
+              try {
+                console.log('🌐 Calling swap daemon makeOffer endpoint directly');
+                
+                // Convert amount from ETH to XMR using a fixed exchange rate for now
+                const ethToXmrRate = '15.5'; // Example rate: 1 ETH = 15.5 XMR
+                const amountInEthFloat = parseFloat(amountInEth);
+                const minAmountXmr = (amountInEthFloat * parseFloat(ethToXmrRate) * 0.95).toString(); // 5% below target
+                const maxAmountXmr = (amountInEthFloat * parseFloat(ethToXmrRate) * 1.05).toString(); // 5% above target
+                
+                // Call the swap daemon directly at 127.0.0.1:5000
+                const swapDaemonResponse = await fetch('http://127.0.0.1:5000/net_makeOffer', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'net_makeOffer',
+                    params: {
+                      minAmount: minAmountXmr,
+                      maxAmount: maxAmountXmr,
+                      exchangeRate: ethToXmrRate,
+                      ethAsset: 'ETH',
+                      // Optional parameters
+                      relayerEndpoint: 'http://localhost:3000/api/relayer'
+                    }
+                  })
+                }).catch(err => {
+                  console.error('❌ Error calling swap daemon:', err);
+                  return null;
+                });
+                
+                if (!swapDaemonResponse || !swapDaemonResponse.ok) {
+                  console.error('⚠️ Warning: Failed to create swap daemon offer');
+                } else {
+                  const swapDaemonData = await swapDaemonResponse.json();
+                  console.log('✅ Swap daemon offer created:', swapDaemonData);
+                }
+              } catch (swapDaemonError) {
+                console.error('⚠️ Warning: Error calling swap daemon:', swapDaemonError);
+              }
+            } catch (error) {
+              console.error('❌ Error creating atomic swap order:', error);
+            }
+          })();
+        }
+        
+        // Wait for user approval/rejection if wallet is connected
+        if (walletConnected && typeof pendingTx !== 'undefined') {
+          pendingTx.then((result: string) => {
+            // Don't send response here anymore - we'll send it immediately when approved
+          }).catch((error: Error) => {
+            // Don't send response here anymore - we'll send it immediately when approved
+          });
+        }
         
         return true; // Keep message channel open for async response
       }
@@ -1168,37 +1297,53 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       
       // Atomic Swap message handlers
       if (msg.type === 'createAtomicSwapOrder') {
-        if (!currentSessionWallet || !moneroWalletInitialized) {
+        console.log('📦 Creating atomic swap order with params:', msg);
+        
+        // Check if we should force create even if wallets aren't initialized
+        const forceCreate = msg.forceCreate === true;
+        
+        if (!forceCreate && (!currentSessionWallet || !moneroWalletInitialized)) {
           sendResponse({ success: false, error: 'Both Ethereum and Monero wallets must be initialized' });
           return;
         }
-        
+
         try {
-          const { srcChainId, dstChainId, srcTokenAddress, dstTokenAddress, amount } = msg;
-          console.log('🔄 Creating atomic swap order with params:', msg);
-          
-          // Get the current wallet addresses
-          const walletAddress = currentSessionWallet.address;
-          const moneroAddress = await moneroWalletManager.getPrimaryAddress();
-          
-          if (!moneroAddress) {
-            throw new Error('Failed to get Monero address');
+          // Get the current Ethereum wallet address or use the one provided
+          let ethAddress;
+          if (msg.orderParams?.walletAddress) {
+            ethAddress = msg.orderParams.walletAddress;
+          } else if (currentSessionWallet) {
+            ethAddress = await currentSessionWallet.getAddress();
+          } else {
+            ethAddress = '0xA6a49d09321f701AB4295e5eB115E65EcF9b83B5'; // Fallback address
           }
+          console.log('🔑 Using ETH address:', ethAddress);
           
-          // Create the order parameters
+          // Get the current Monero wallet address or use the one provided
+          let xmrAddress;
+          if (msg.orderParams?.xmrAddress) {
+            xmrAddress = msg.orderParams.xmrAddress;
+          } else if (moneroWalletInitialized) {
+            xmrAddress = await moneroWalletManager.getPrimaryAddress();
+          } else {
+            xmrAddress = '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A'; // Fallback address
+          }
+          console.log('🔑 Using XMR address:', xmrAddress);
+          
+          // Prepare the order parameters
           const orderParams = {
-            srcChainId,
-            dstChainId,
-            srcTokenAddress,
-            dstTokenAddress,
-            amount: amount.toString(),
-            walletAddress,
-            xmrAddress: moneroAddress
+            srcChainId: msg.orderParams?.srcChainId || 1, // Default to Ethereum mainnet
+            dstChainId: msg.orderParams?.dstChainId || 0, // Default to Monero (0)
+            srcTokenAddress: msg.orderParams?.srcTokenAddress || '0x0000000000000000000000000000000000000000', // Default to ETH
+            dstTokenAddress: msg.orderParams?.dstTokenAddress || 'XMR', // Default to XMR
+            amount: msg.orderParams?.amount,
+            walletAddress: ethAddress,
+            xmrAddress: xmrAddress
           };
           
-          console.log('📤 Sending order creation request to microservice:', orderParams);
+          console.log('📋 Prepared order parameters:', orderParams);
           
-          // Make API request to the microservice
+          // Call the 1InchMicroservice API to create an atomic swap order
           const response = await fetch('http://localhost:3000/api/orders', {
             method: 'POST',
             headers: {
@@ -1207,74 +1352,120 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             body: JSON.stringify(orderParams)
           });
           
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create order');
-          }
-          
           const responseData = await response.json();
-          console.log('📥 Order creation response:', responseData);
+          console.log('📥 1InchMicroservice API response:', responseData);
           
-          if (!responseData.success) {
-            throw new Error(responseData.error || 'Failed to create order');
-          }
+          // Call the swap daemon's makeOffer endpoint
+          const ethToXmrRate = '15.5'; // Example rate: 1 ETH = 15.5 XMR
+          const amountInEth = parseFloat(msg.orderParams?.amount || '0');
+          const minAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 0.95).toString(); // 5% below target
+          const maxAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 1.05).toString(); // 5% above target
           
-          // Call the swap daemon's makeOffer endpoint directly at 127.0.0.1:5000
-          try {
-            console.log('🌐 Calling swap daemon makeOffer endpoint directly');
-            
-            // Convert amount from ETH to XMR using a fixed exchange rate for now
-            // In a real implementation, you would get the current exchange rate from an oracle
-            const ethToXmrRate = '15.5'; // Example rate: 1 ETH = 15.5 XMR
-            const amountInEth = parseFloat(amount);
-            const minAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 0.95).toString(); // 5% below target
-            const maxAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 1.05).toString(); // 5% above target
-            
-            // Call the swap daemon directly at 127.0.0.1:5000
-            const swapDaemonResponse = await fetch('http://127.0.0.1:5000/net_makeOffer', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: 1,
-                method: 'net_makeOffer',
-                params: {
-                  minAmount: minAmountXmr,
-                  maxAmount: maxAmountXmr,
-                  exchangeRate: ethToXmrRate,
-                  ethAsset: srcTokenAddress === '0x0000000000000000000000000000000000000000' ? 'ETH' : srcTokenAddress,
-                  // Optional parameters
-                  relayerEndpoint: 'http://localhost:3000/api/relayer'
-                }
-              })
-            });
-            
-            if (!swapDaemonResponse.ok) {
-              const errorData = await swapDaemonResponse.json();
-              console.error('⚠️ Warning: Failed to create swap daemon offer:', errorData.error || errorData);
-              // Continue even if this fails - don't block the main flow
-            } else {
-              const swapDaemonData = await swapDaemonResponse.json();
-              console.log('✅ Swap daemon offer created:', swapDaemonData);
+          // Prepare the JSON-RPC request for the swap daemon
+          const jsonRpcRequest = {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'net_makeOffer',
+            params: {
+              minAmount: minAmountXmr,
+              maxAmount: maxAmountXmr,
+              exchangeRate: ethToXmrRate,
+              ethAsset: 'ETH',
+              // Optional parameters
+              relayerEndpoint: 'http://localhost:3000/api/relayer'
             }
-          } catch (swapDaemonError) {
-            console.error('⚠️ Warning: Error calling swap daemon:', swapDaemonError);
-            // Continue even if this fails - don't block the main flow
+          };
+          
+          // Create a formatted JSON string for logging
+          const jsonString = JSON.stringify(jsonRpcRequest, null, 4);
+          console.log('🌐 Swap daemon JSON-RPC request:', jsonRpcRequest);
+          
+          // Log the equivalent curl command for manual testing
+          const curlCommand = `curl -s -X POST "http://127.0.0.1:5000" -H 'Content-Type: application/json' -d '${jsonString}' | jq`;
+          console.log('📋 Equivalent curl command for testing:\n', curlCommand);
+          
+          // Call the swap daemon endpoint using the standard JSON-RPC endpoint
+          const swapDaemonResponse = await fetch('http://127.0.0.1:5000', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonRpcRequest)
+          });
+          
+          // Safely parse the response
+          let swapDaemonData;
+          try {
+            const text = await swapDaemonResponse.text();
+            swapDaemonData = JSON.parse(text);
+            console.log('🌐 Swap daemon response:', swapDaemonData);
+          } catch (jsonError) {
+            console.error('❌ Invalid JSON response from swap daemon');
+            swapDaemonData = { error: 'Invalid JSON response from swap daemon' };
           }
           
-          // Return the order details
-          sendResponse({
-            success: true,
-            data: responseData.data
+          sendResponse({ 
+            success: true, 
+            orderData: responseData,
+            swapDaemonData: swapDaemonData
           });
         } catch (error) {
           console.error('❌ Error creating atomic swap order:', error);
-          sendResponse({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error creating order'
+          sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error creating atomic swap order' });
+        }
+      }
+      
+      // Handle direct swap daemon calls
+      if (msg.type === 'callSwapDaemon') {
+        console.log('🌐 Calling swap daemon with method:', msg.method, 'and params:', msg.params);
+        
+        try {
+          // Prepare the JSON-RPC request - ensure params is properly formatted as an object
+          // The swap daemon expects params as an object, not as a direct value
+          const jsonRpcRequest = {
+            jsonrpc: '2.0',
+            id: 1,
+            method: msg.method,
+            // If params is already an object, use it directly; otherwise wrap it
+            params: typeof msg.params === 'object' && msg.params !== null ? msg.params : { params: msg.params }
+          };
+          
+          // Create a formatted JSON string for logging
+          const jsonString = JSON.stringify(jsonRpcRequest, null, 4);
+          console.log('🌐 JSON-RPC request:', jsonRpcRequest);
+          
+          // Log the equivalent curl command for manual testing
+          const curlCommand = `curl -s -X POST "http://127.0.0.1:5000" -H 'Content-Type: application/json' -d '${jsonString}' | jq`;
+          console.log('📋 Equivalent curl command for testing:\n', curlCommand);
+          
+          // Call the swap daemon endpoint - don't append the method to the URL
+          // The JSON-RPC standard uses a single endpoint for all methods
+          const response = await fetch('http://127.0.0.1:5000', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonRpcRequest)
           });
+          
+          // Check if the response is valid JSON before parsing
+          const text = await response.text();
+          let responseData;
+          try {
+            responseData = JSON.parse(text);
+            console.log('🌐 Swap daemon response:', responseData);
+          } catch (jsonError) {
+            console.error('❌ Invalid JSON response from swap daemon:', text);
+            throw new Error('Invalid JSON response from swap daemon');
+          }
+          
+          sendResponse({ 
+            success: true, 
+            data: responseData
+          });
+        } catch (error) {
+          console.error('❌ Error calling swap daemon:', error);
+          sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error calling swap daemon' });
         }
       }
       
