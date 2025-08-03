@@ -35,12 +35,14 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 - `XMREscrowSrc`: Source escrow adapter contract connecting with 1inch cross-chain swap interfaces
 - `XMREscrowDst`: Destination escrow adapter contract for cross-chain swaps
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
+- `AmountGetterWithFee`: Calculates order prices for XMR-ETH swaps including relayer fees
 - **Deployed on Base Sepolia**:
   - SwapCreator: [`0x212072CB504Dc2fBF6477772B8E318D286B80e35`](https://sepolia.basescan.org/address/0x212072CB504Dc2fBF6477772B8E318D286B80e35)
   - XMREscrowSrc: [`0x8c39940feBc35F0A44868c3B3E138C58989944a1`](https://sepolia.basescan.org/address/0x8c39940feBc35F0A44868c3B3E138C58989944a1)
   - XMREscrowDst: [`0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea`](https://sepolia.basescan.org/address/0xA81283f4E4FB8eDd1cF497C09ABcFa8bBe9289Ea)
   - Resolver: [`0x569961856A3f66788D29e70aeaB7400f11895f4A`](https://sepolia.basescan.org/address/0x569961856A3f66788D29e70aeaB7400f11895f4A)
   - LimitOrderProtocol: [`0xE53136D9De56672e8D2665C98653AC7b8A60Dc44`](https://sepolia.basescan.org/address/0xE53136D9De56672e8D2665C98653AC7b8A60Dc44)
+  - AmountGetterWithFee: [`0xf3Cb12aF6C50999cF5Cc5A4434166CBFAC75398B`](https://sepolia.basescan.org/address/0xf3Cb12aF6C50999cF5Cc5A4434166CBFAC75398B)
 
 ### Key Features
 - ✅ **Modular Architecture**: Adapter pattern for easy integration and upgrades
