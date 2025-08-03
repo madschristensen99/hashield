@@ -142,6 +142,46 @@ export class OrderController {
       return res.status(500).json({ success: false, error: 'Failed to update order' });
     }
   }
+
+  async fillOrder(req: Request, res: Response) {
+    try {
+      logger.info('Received order fill request', { body: req.body });
+      
+      // Validate the request body
+      if (!req.body.function || !req.body.params) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid request format. Expected {function, params}' 
+        });
+      }
+      
+      // Call the oneInchService to fill the order
+      const result = await oneInchService.fillOrder(req.body);
+      
+      if (!result.success) {
+        logger.error('Order fill failed', { error: result.error });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error || 'Failed to fill order'
+        });
+      }
+      
+      logger.info('Order filled successfully', { txHash: result.txHash });
+      
+      return res.status(200).json({ 
+        success: true, 
+        data: {
+          txHash: result.txHash
+        }
+      });
+    } catch (error: any) {
+      logger.error('Error filling order', { error });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Failed to fill order'
+      });
+    }
+  }
 }
 
 export default new OrderController();

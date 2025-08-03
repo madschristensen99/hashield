@@ -35,6 +35,7 @@ app.get('/api/orders', orderController.getActiveOrders.bind(orderController));
 app.get('/api/orders/maker/:address', orderController.getOrdersByMaker.bind(orderController));
 app.get('/api/orders/:orderId', orderController.getOrderById.bind(orderController));
 app.post('/api/orders', orderController.createOrder.bind(orderController));
+app.post('/api/orders/fill', orderController.fillOrder.bind(orderController));
 app.patch('/api/orders/:orderId', orderController.updateOrderStatus.bind(orderController));
 
 // Swap daemon routes

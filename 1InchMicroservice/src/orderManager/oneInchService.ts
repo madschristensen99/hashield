@@ -67,43 +67,117 @@ export class OneInchService {
 
   async fillOrder(orderData: any) {
     try {
-      logger.info('Filling order on LimitOrderProtocol', { contractAddress: LIMIT_ORDER_PROTOCOL_ADDRESS });
+      logger.info('Filling order on LimitOrderProtocol', { 
+        contractAddress: LIMIT_ORDER_PROTOCOL_ADDRESS,
+        orderData
+      });
       
-      // This is a placeholder for the actual implementation
-      // The real implementation would call the fillOrder function on the LimitOrderProtocol contract
-      // with the data structure provided
+      // Create a contract instance for the LimitOrderProtocol
+      const limitOrderProtocol = new ethers.Contract(
+        LIMIT_ORDER_PROTOCOL_ADDRESS,
+        LIMIT_ORDER_PROTOCOL_ABI,
+        this.wallet
+      );
       
-      /*
-      The data structure would be:
-      {
-        "function": "fillOrder((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256),bytes32,bytes32,uint256,uint256)",
-        "params": [
-          [
-            "26207551322371976878585353221260688069607178536192576683038894547077949262514",
-            "420372109872304513921779494997149469955536735806",
-            "420372109872304513921779494997149469955536735806",
-            "0",
-            "0",
-            "1000000000000000",
-            "1000000000000000",
-            "0"
-          ],
-          "0xbbb9a57708a24e3e55ca83b9c6f5d656865697a7f1bfbbd1d21fe6cb0fec9d83",
-          "0xfe03eb9a9a40cfbe887e88a2e531642498362c783b97b3b9917ff0eee5be8d96",
-          "1000000000000000",
-          "0"
-        ]
+      // Extract parameters from the orderData, handling different possible formats
+      let params;
+      if (orderData.function === 'fillOrder') {
+        // Handle the format from our API
+        params = orderData.params;
+        logger.info('Using API params format', { params });
+      } else if (Array.isArray(orderData.params)) {
+        // Handle array format
+        params = {
+          order: orderData.params[0],
+          claimSecretHash: orderData.params[1],
+          refundSecretHash: orderData.params[2],
+          amount: orderData.params[3],
+          unwrapWeth: orderData.params[4] || 0
+        };
+        logger.info('Using array params format', { params });
+      } else {
+        // Use as is
+        params = orderData;
+        logger.info('Using direct params format', { params });
       }
-      */
       
-      // Return a mock transaction hash for now
+      // Log the parameters we're going to use
+      logger.info('Preparing fillOrder parameters', {
+        order: params.order,
+        claimSecretHash: params.claimSecretHash,
+        refundSecretHash: params.refundSecretHash,
+        amount: params.amount,
+        unwrapWeth: params.unwrapWeth || 0
+      });
+
+      // Format parameters for the contract
+      // Convert order array elements to BigNumber if they're not already
+      const orderArray = Array.isArray(params.order) 
+        ? params.order.map((item: string | number) => ethers.BigNumber.from(item.toString()))
+        : params.order;
+        
+      // Ensure hashes are properly formatted as bytes32
+      const claimHash = params.claimSecretHash.startsWith('0x') 
+        ? params.claimSecretHash 
+        : `0x${params.claimSecretHash}`;
+        
+      const refundHash = params.refundSecretHash.startsWith('0x') 
+        ? params.refundSecretHash 
+        : `0x${params.refundSecretHash}`;
+      
+      // Convert amount to BigNumber
+      const amount = ethers.BigNumber.from(params.amount.toString());
+      
+      // Convert unwrapWeth to number
+      const unwrapWeth = Number(params.unwrapWeth || 0);
+      
+      logger.info('Formatted parameters for contract call', {
+        orderArray,
+        claimHash,
+        refundHash,
+        amount: amount.toString(),
+        unwrapWeth
+      });
+      
+      // Call the fillOrder function on the contract
+      const tx = await limitOrderProtocol.fillOrder(
+        orderArray,
+        claimHash,
+        refundHash,
+        amount,
+        unwrapWeth,
+        { gasLimit: 500000 } // Set an appropriate gas limit
+      );
+      
+      logger.info('Order fill transaction submitted', { 
+        txHash: tx.hash,
+        from: this.wallet.address,
+        to: LIMIT_ORDER_PROTOCOL_ADDRESS
+      });
+      
+      // Wait for the transaction to be mined
+      const receipt = await tx.wait();
+      
+      logger.info('Order fill transaction confirmed', { 
+        txHash: receipt.transactionHash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString()
+      });
+      
+      // Return the transaction hash
       return {
         success: true,
-        txHash: '0x' + randomBytes(32).toString('hex')
+        txHash: receipt.transactionHash
       };
-    } catch (error) {
-      logger.error('Error filling order', { error });
-      throw error;
+    } catch (error: any) {
+      logger.error('Error filling order on chain', { error });
+      
+      // Return error details
+      return {
+        success: false,
+        error: error.message || String(error),
+        txHash: null
+      };
     }
   }
 
