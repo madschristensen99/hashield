@@ -21,7 +21,11 @@ To make this project I smashed together three existing projects:
 The end result is a privacy-focused web3 wallet that enables secure, atomic swaps between EVM chains and Monero.
 
 - **EVM Side**: Smart contracts with deterministic factory deployment and adapter pattern
+  - Address spoofing for dApp compatibility while maintaining privacy
+  - Relayer system for funding fresh wallets with each transaction
 - **Monero Side**: Native Monero cryptographic primitives for secure transactions
+  - Adapter signatures to enforce timelock guarantees across chains
+  - Integrated Monero wallet functionality within the extension
 - **Atomic Guarantee**: Either both parties get their desired assets, or both get refunded
 
 ### 🔄 Supported Swap Directions
