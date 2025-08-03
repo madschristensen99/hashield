@@ -6,8 +6,14 @@ import {IEscrowSrc} from "./cross-chain-swap/contracts/interfaces/IEscrowSrc.sol
 import {IEscrow} from "./cross-chain-swap/contracts/interfaces/IEscrow.sol";
 import {IBaseEscrow} from "./cross-chain-swap/contracts/interfaces/IBaseEscrow.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+// Import fee extension
+import {AmountGetterWithFee} from "./limit-order-protocol/contracts/extensions/AmountGetterWithFee.sol";
 
 contract XMREscrowSrc is IEscrowSrc {
+    using SafeERC20 for IERC20;
+    
     SwapCreator public immutable SC;
     
     // Mapping from 1inch orderHash to SwapCreator swapID
@@ -15,6 +21,9 @@ contract XMREscrowSrc is IEscrowSrc {
     
     // Mapping from swapID to swap parameters
     mapping(bytes32 => SwapParams) public swapParams;
+    
+    // Fee-related storage
+    mapping(bytes32 => FeeInfo) public orderFees;
     
     // Store essential swap parameters to reconstruct the Swap struct
     struct SwapParams {
@@ -28,22 +37,81 @@ contract XMREscrowSrc is IEscrowSrc {
         uint256 nonce;
     }
     
+    // Store fee information for each order
+    struct FeeInfo {
+        uint256 integratorFee;     // Fee percentage in 1e5 format (e.g., 50 = 0.05%)
+        uint256 integratorShare;    // Share percentage in 1e2 format (e.g., 50 = 50%)
+        uint256 resolverFee;        // Fee percentage in 1e5 format
+        address feeRecipient;       // Address to receive fees
+    }
+    
     // Events
     event SwapCreated(bytes32 orderHash, bytes32 swapID);
     event WithdrawExecuted(bytes32 orderHash, bytes32 swapID, address recipient);
     event CancelExecuted(bytes32 orderHash, bytes32 swapID);
+    event FeesCollected(bytes32 orderHash, uint256 integratorFee, uint256 resolverFee, address recipient);
     
     constructor(SwapCreator _sc) { SC = _sc; }
 
     /* --------------------------------------------------------
        1.  IEscrowSrc – main functions called by 1inch
        -------------------------------------------------------- */
+    /**
+     * @notice Creates an escrow with support for fee calculation
+     * @dev Parses fee data from extraData if available
+     */
     function createEscrow(
         bytes32 orderHash,
         address token,uint256 amount,address,address,
         uint48,uint48,bytes calldata extraData
     ) external payable {
-        (bytes32 claimC, bytes32 refundC, uint256 nonce) = abi.decode(extraData, (bytes32, bytes32, uint256));
+        // Parse the extraData to extract fee information and XMR swap data
+        // First 6 bytes are fee data, followed by whitelist data, then our XMR swap data
+        bytes calldata xmrData;
+        uint256 integratorFee = 0;
+        uint256 integratorShare = 0;
+        uint256 resolverFee = 0;
+        address feeRecipient = address(0);
+        
+        // Check if extraData contains fee information (at least 6 bytes for fee data + 1 byte for whitelist size)
+        if (extraData.length >= 7) {
+            // Extract fee data
+            integratorFee = uint256(uint16(bytes2(extraData[:2])));
+            integratorShare = uint256(uint8(extraData[2]));
+            resolverFee = uint256(uint16(bytes2(extraData[3:5])));
+            
+            // Skip whitelist data
+            uint256 whitelistSize = uint256(uint8(extraData[6]));
+            uint256 whitelistDataLength = 1 + (whitelistSize * 10); // 1 byte for size + 10 bytes per address
+            
+            // Extract XMR data after fee and whitelist data
+            xmrData = extraData[6 + whitelistDataLength:];
+            
+            // Set fee recipient to msg.sender for now (could be customized in the future)
+            feeRecipient = msg.sender;
+            
+            // Store fee information for this order
+            orderFees[orderHash] = FeeInfo({
+                integratorFee: integratorFee,
+                integratorShare: integratorShare,
+                resolverFee: resolverFee,
+                feeRecipient: feeRecipient
+            });
+        } else {
+            // If no fee data, use the entire extraData as XMR data
+            xmrData = extraData;
+        }
+        
+        // Decode XMR-specific data
+        (bytes32 claimC, bytes32 refundC, uint256 nonce) = abi.decode(xmrData, (bytes32, bytes32, uint256));
+        
+        // Calculate the actual amount after fees
+        uint256 valueAfterFees = amount;
+        if (integratorFee > 0 || resolverFee > 0) {
+            // Apply fee calculation similar to AmountGetterWithFee
+            uint256 totalFee = integratorFee + resolverFee;
+            valueAfterFees = amount * 100000 / (100000 + totalFee);
+        }
         
         // Determine if this is an ETH or token swap
         address asset = address(0);  // Default to ETH
@@ -52,13 +120,28 @@ contract XMREscrowSrc is IEscrowSrc {
         // If token is specified, use it instead of ETH
         if (token != address(0)) {
             asset = token;
-            value = amount;
+            value = valueAfterFees; // Use the amount after fees
             
             // Transfer tokens from sender to this contract
-            IERC20(token).transferFrom(msg.sender, address(this), amount);
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
             
-            // Approve SwapCreator to spend these tokens
-            IERC20(token).approve(address(SC), amount);
+            // If there are fees, distribute them
+            if (integratorFee > 0 || resolverFee > 0) {
+                uint256 feeAmount = amount - valueAfterFees;
+                
+                // Calculate integrator and resolver portions
+                uint256 integratorAmount = feeAmount * integratorFee / (integratorFee + resolverFee);
+                uint256 resolverAmount = feeAmount - integratorAmount;
+                
+                // Transfer fees to recipient
+                if (feeAmount > 0 && feeRecipient != address(0)) {
+                    IERC20(token).safeTransfer(feeRecipient, feeAmount);
+                    emit FeesCollected(orderHash, integratorAmount, resolverAmount, feeRecipient);
+                }
+            }
+            
+            // Approve SwapCreator to spend these tokens (only the amount after fees)
+            IERC20(token).approve(address(SC), valueAfterFees);
         }
         
         // Create the swap using SwapCreator
@@ -69,7 +152,7 @@ contract XMREscrowSrc is IEscrowSrc {
             1 days, // timeout1 duration (24 hours)
             7 days, // timeout2 duration (7 days)
             asset,  // ETH or token address
-            value,  // ETH or token amount
+            value,  // ETH or token amount (after fees)
             nonce
         );
         
