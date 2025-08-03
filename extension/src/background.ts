@@ -1166,6 +1166,178 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         }
       }
       
+      // Atomic Swap message handlers
+      if (msg.type === 'createAtomicSwapOrder') {
+        if (!currentSessionWallet || !moneroWalletInitialized) {
+          sendResponse({ success: false, error: 'Both Ethereum and Monero wallets must be initialized' });
+          return;
+        }
+        
+        try {
+          const { srcChainId, dstChainId, srcTokenAddress, dstTokenAddress, amount } = msg;
+          console.log('🔄 Creating atomic swap order with params:', msg);
+          
+          // Get the current wallet addresses
+          const walletAddress = currentSessionWallet.address;
+          const moneroAddress = await moneroWalletManager.getPrimaryAddress();
+          
+          if (!moneroAddress) {
+            throw new Error('Failed to get Monero address');
+          }
+          
+          // Create the order parameters
+          const orderParams = {
+            srcChainId,
+            dstChainId,
+            srcTokenAddress,
+            dstTokenAddress,
+            amount: amount.toString(),
+            walletAddress,
+            xmrAddress: moneroAddress
+          };
+          
+          console.log('📤 Sending order creation request to microservice:', orderParams);
+          
+          // Make API request to the microservice
+          const response = await fetch('http://localhost:3000/api/orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderParams)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create order');
+          }
+          
+          const responseData = await response.json();
+          console.log('📥 Order creation response:', responseData);
+          
+          if (!responseData.success) {
+            throw new Error(responseData.error || 'Failed to create order');
+          }
+          
+          // Return the order details
+          sendResponse({
+            success: true,
+            data: responseData.data
+          });
+        } catch (error) {
+          console.error('❌ Error creating atomic swap order:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error creating order'
+          });
+        }
+      }
+      
+      if (msg.type === 'getAtomicSwapOrder') {
+        try {
+          const { orderId } = msg;
+          console.log('🔍 Getting atomic swap order details for:', orderId);
+          
+          // Make API request to the microservice
+          const response = await fetch(`http://localhost:3000/api/orders/${orderId}`);
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to get order details');
+          }
+          
+          const responseData = await response.json();
+          console.log('📥 Order details response:', responseData);
+          
+          if (!responseData.success) {
+            throw new Error(responseData.error || 'Failed to get order details');
+          }
+          
+          // Return the order details
+          sendResponse({
+            success: true,
+            data: responseData.data
+          });
+        } catch (error) {
+          console.error('❌ Error getting atomic swap order:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error getting order'
+          });
+        }
+      }
+      
+      if (msg.type === 'initiateAtomicSwap') {
+        try {
+          const { orderId } = msg;
+          console.log('🚀 Initiating atomic swap for order:', orderId);
+          
+          // First get the order details
+          const orderResponse = await fetch(`http://localhost:3000/api/orders/${orderId}`);
+          if (!orderResponse.ok) {
+            const errorData = await orderResponse.json();
+            throw new Error(errorData.error || 'Failed to get order details');
+          }
+          
+          const orderData = await orderResponse.json();
+          if (!orderData.success) {
+            throw new Error(orderData.error || 'Failed to get order details');
+          }
+          
+          const order = orderData.data;
+          
+          // Create a swap using the order details
+          const swapResponse = await fetch('http://localhost:3000/api/swaps', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              orderId: orderId,
+              srcChainId: order.srcChainId,
+              dstChainId: order.dstChainId,
+              amount: order.amount
+            })
+          });
+          
+          if (!swapResponse.ok) {
+            const errorData = await swapResponse.json();
+            throw new Error(errorData.error || 'Failed to initiate swap');
+          }
+          
+          const swapData = await swapResponse.json();
+          console.log('📥 Swap initiation response:', swapData);
+          
+          if (!swapData.success) {
+            throw new Error(swapData.error || 'Failed to initiate swap');
+          }
+          
+          // Update the order status to link it with the swap
+          await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              status: 'READY',
+              swapId: swapData.data.swapId
+            })
+          });
+          
+          // Return the swap details
+          sendResponse({
+            success: true,
+            data: swapData.data
+          });
+        } catch (error) {
+          console.error('❌ Error initiating atomic swap:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error initiating swap'
+          });
+        }
+      }
+      
     } catch (error) {
       console.error('Background script error:', error);
       sendResponse({ error: 'Internal error' });

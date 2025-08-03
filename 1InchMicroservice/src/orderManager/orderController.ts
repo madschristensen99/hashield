@@ -57,12 +57,24 @@ export class OrderController {
     try {
       const params: SwapParams = req.body;
       
-      // Validate required parameters
-      if (!params.srcChainId || !params.dstChainId || !params.srcTokenAddress || 
-          !params.dstTokenAddress || !params.amount || !params.walletAddress || !params.xmrAddress) {
+      // Log the received parameters for debugging
+      logger.info('Received order creation request', { params });
+      
+      // Check each required parameter individually and log which ones are missing
+      const missingParams = [];
+      if (!params.srcChainId) missingParams.push('srcChainId');
+      if (!params.dstChainId && params.dstChainId !== 0) missingParams.push('dstChainId');
+      if (!params.srcTokenAddress) missingParams.push('srcTokenAddress');
+      if (!params.dstTokenAddress) missingParams.push('dstTokenAddress');
+      if (!params.amount) missingParams.push('amount');
+      if (!params.walletAddress) missingParams.push('walletAddress');
+      if (!params.xmrAddress) missingParams.push('xmrAddress');
+      
+      if (missingParams.length > 0) {
+        logger.error('Missing required parameters', { missingParams });
         return res.status(400).json({ 
           success: false, 
-          error: 'Missing required parameters' 
+          error: `Missing required parameters: ${missingParams.join(', ')}` 
         });
       }
       
