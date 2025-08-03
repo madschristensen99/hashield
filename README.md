@@ -34,6 +34,7 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 ### Smart Contracts (EVM)
 - `XMREscrowSrc`: Source escrow adapter contract connecting with 1inch cross-chain swap interfaces
 - `XMREscrowDst`: Destination escrow adapter contract for cross-chain swaps
+- `Resolver`: Deploys escrow contracts and handles relayer fee calculation
 - `SwapCreator`: Implementation of ETH-XMR atomic swap contract
 - `AmountGetterWithFee`: Calculates order prices for XMR-ETH swaps including relayer fees
 - **Deployed on Base Sepolia**:
@@ -49,6 +50,7 @@ The end result is a privacy-focused web3 wallet that enables secure, atomic swap
 - ✅ **1-inch Compatible**: Interface compatibility for aggregator integration
 - ✅ **Privacy-Preserving**: Works with Monero's privacy features
 - ✅ **Cross-Chain**: Atomic swaps between EVM chains and Monero
+- ✅ **Relayer Transactions**: Specialized relayer system that funds fresh wallets for anonymous wallet funding
 
 ## 🚀 Development Setup
 
