@@ -1219,6 +1219,51 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             throw new Error(responseData.error || 'Failed to create order');
           }
           
+          // Call the swap daemon's makeOffer endpoint directly at 127.0.0.1:5000
+          try {
+            console.log('🌐 Calling swap daemon makeOffer endpoint directly');
+            
+            // Convert amount from ETH to XMR using a fixed exchange rate for now
+            // In a real implementation, you would get the current exchange rate from an oracle
+            const ethToXmrRate = '15.5'; // Example rate: 1 ETH = 15.5 XMR
+            const amountInEth = parseFloat(amount);
+            const minAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 0.95).toString(); // 5% below target
+            const maxAmountXmr = (amountInEth * parseFloat(ethToXmrRate) * 1.05).toString(); // 5% above target
+            
+            // Call the swap daemon directly at 127.0.0.1:5000
+            const swapDaemonResponse = await fetch('http://127.0.0.1:5000/net_makeOffer', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'net_makeOffer',
+                params: {
+                  minAmount: minAmountXmr,
+                  maxAmount: maxAmountXmr,
+                  exchangeRate: ethToXmrRate,
+                  ethAsset: srcTokenAddress === '0x0000000000000000000000000000000000000000' ? 'ETH' : srcTokenAddress,
+                  // Optional parameters
+                  relayerEndpoint: 'http://localhost:3000/api/relayer'
+                }
+              })
+            });
+            
+            if (!swapDaemonResponse.ok) {
+              const errorData = await swapDaemonResponse.json();
+              console.error('⚠️ Warning: Failed to create swap daemon offer:', errorData.error || errorData);
+              // Continue even if this fails - don't block the main flow
+            } else {
+              const swapDaemonData = await swapDaemonResponse.json();
+              console.log('✅ Swap daemon offer created:', swapDaemonData);
+            }
+          } catch (swapDaemonError) {
+            console.error('⚠️ Warning: Error calling swap daemon:', swapDaemonError);
+            // Continue even if this fails - don't block the main flow
+          }
+          
           // Return the order details
           sendResponse({
             success: true,
