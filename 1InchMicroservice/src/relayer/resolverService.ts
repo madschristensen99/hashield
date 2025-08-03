@@ -23,28 +23,62 @@ const XMR_ESCROW_SRC_ABI = [
 ];
 
 export class ResolverService {
-  private provider: ethers.providers.JsonRpcProvider;
-  private wallet: ethers.Wallet;
-  private resolver: ethers.Contract;
-  private xmrEscrowSrc: ethers.Contract;
+  private provider!: ethers.providers.JsonRpcProvider;
+  private wallet!: ethers.Wallet;
+  private _resolver: ethers.Contract | null = null;
+  private _xmrEscrowSrc: ethers.Contract | null = null;
 
   constructor() {
-    this.provider = new ethers.providers.JsonRpcProvider(config.blockchain.baseSepolia.rpcUrl);
-    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
-    
-    // Initialize the Resolver contract
-    this.resolver = new ethers.Contract(
-      config.blockchain.baseSepolia.contracts.limitOrderProtocol, // Using the LimitOrderProtocol address as Resolver
-      RESOLVER_ABI,
-      this.wallet
-    );
-    
-    // Initialize the XMREscrowSrc contract
-    this.xmrEscrowSrc = new ethers.Contract(
-      config.blockchain.baseSepolia.contracts.xmrEscrowSrc,
-      XMR_ESCROW_SRC_ABI,
-      this.wallet
-    );
+    try {
+      // Only initialize provider and wallet in constructor
+      this.provider = new ethers.providers.JsonRpcProvider(config.blockchain.baseSepolia.rpcUrl);
+      
+      // Use environment variable for private key if available
+      const privateKey = process.env.PRIVATE_KEY || config.blockchain.privateKey;
+      if (!privateKey) {
+        throw new Error('Private key is not configured');
+      }
+      
+      this.wallet = new ethers.Wallet(privateKey, this.provider);
+      logger.info(`ResolverService initialized with wallet: ${this.wallet.address}`);
+    } catch (error) {
+      logger.error('Error initializing ResolverService', { error });
+      // Don't throw here, let the service start but contract calls will fail
+    }
+  }
+  
+  // Lazy initialization of resolver contract
+  private get resolver(): ethers.Contract {
+    if (!this._resolver) {
+      try {
+        this._resolver = new ethers.Contract(
+          config.blockchain.baseSepolia.contracts.limitOrderProtocol,
+          RESOLVER_ABI,
+          this.wallet
+        );
+      } catch (error) {
+        logger.error('Error initializing Resolver contract', { error });
+        throw error;
+      }
+    }
+    return this._resolver;
+  }
+  
+  // Lazy initialization of XMREscrowSrc contract
+  private get xmrEscrowSrc(): ethers.Contract {
+    if (!this._xmrEscrowSrc) {
+      try {
+        this._xmrEscrowSrc = new ethers.Contract(
+          config.blockchain.baseSepolia.contracts.xmrEscrowSrc,
+          XMR_ESCROW_SRC_ABI,
+          this.wallet
+        );
+      } catch (error) {
+        logger.error('Error initializing XMREscrowSrc contract', { error });
+        throw error;
+      }
+    }
+    return this._xmrEscrowSrc;
   }
 
   /**
